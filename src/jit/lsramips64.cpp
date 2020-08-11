@@ -369,6 +369,13 @@ int LinearScan::BuildNode(GenTree* tree)
         case GT_GE:
         case GT_GT:
         case GT_JCMP:
+            if (!varTypeIsFloating(tree->gtGetOp1()))
+            {
+                // We need two registers: tmpRegOp1 and tmpRegOp2
+                buildInternalIntRegisterDefForNode(tree);
+                buildInternalIntRegisterDefForNode(tree);
+                buildInternalRegisterUses();
+            }
             srcCount = BuildCmp(tree);
             break;
 

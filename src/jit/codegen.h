@@ -1490,8 +1490,7 @@ public:
 #ifdef _TARGET_ARM64_
     void instGen_MemoryBarrier(insBarrier barrierType = INS_BARRIER_ISH);
 #elif defined(_TARGET_MIPS64_)
-////FIXME for MIPS.
-    void instGen_MemoryBarrier(insBarrier barrierType = INS_BARRIER_ISH);
+    void instGen_MemoryBarrier(insBarrier barrierType = INS_BARRIER_MB);
 #else
     void instGen_MemoryBarrier();
 #endif

@@ -1533,6 +1533,12 @@ CHECK PEDecoder::CheckILOnlyImportDlls() const
     PIMAGE_IMPORT_DESCRIPTOR pID = (PIMAGE_IMPORT_DESCRIPTOR) GetDirectoryData(pDirEntryImport);
     CHECK(pID != NULL);
     PREFIX_ASSUME(pID != NULL);
+#ifdef _TARGET_MIPS64_
+    IMAGE_IMPORT_DESCRIPTOR tmpID[2];
+    //IMAGE_IMPORT_DESCRIPTOR tmpID1;
+    memcpy(tmpID, pID, 2*sizeof(IMAGE_IMPORT_DESCRIPTOR));
+    pID = tmpID;
+#endif
 
     // Entry 0: ILT, Name, IAT must be be non-null.  Forwarder, DateTime should be NULL.
     CHECK( IMAGE_IMPORT_DESC_FIELD(pID[0], Characteristics) != 0

@@ -1872,18 +1872,25 @@ void CodeGen::genJumpToThrowHlpBlk(emitJumpKind jumpKind, SpecialCodeKind codeKi
 
         BasicBlock*  tgtBlk          = nullptr;
         emitJumpKind reverseJumpKind = emitter::emitReverseJumpKind(jumpKind);
+#if defined(_TARGET_MIPS64_)
+        assert(reverseJumpKind == jumpKind);
+        tgtBlk = genCreateTempLabel();
+#else
         if (reverseJumpKind != jumpKind)
         {
             tgtBlk = genCreateTempLabel();
             inst_JMP(reverseJumpKind, tgtBlk);
         }
+#endif
 
         genEmitHelperCall(compiler->acdHelper(codeKind), 0, EA_UNKNOWN);//no branch-delay!
 
         // Define the spot for the normal non-exception case to jump to.
         if (tgtBlk != nullptr)
         {
+#ifndef _TARGET_MIPS64_
             assert(reverseJumpKind != jumpKind);
+#endif
             genDefineTempLabel(tgtBlk);
         }
     }
@@ -7043,6 +7050,7 @@ void CodeGen::genZeroInitFrame(int untrLclHi, int untrLclLo, regNumber initReg, 
         unsigned uCntBytes = untrLclHi - untrLclLo;
         assert((uCntBytes % sizeof(int)) == 0);         // The smallest stack slot is always 4 bytes.
         unsigned uCntSlots = uCntBytes / REGSIZE_BYTES; // How many register sized stack slots we're going to use.
+        unsigned int padding = untrLclLo & 0x7;
 
         // When uCntSlots is 9 or less, we will emit a sequence of sd instructions inline.
         // When it is 10 or greater, we will emit a loop containing a sd instruction.
@@ -7062,6 +7070,7 @@ void CodeGen::genZeroInitFrame(int untrLclHi, int untrLclLo, regNumber initReg, 
 
         // rAddr is not a live incoming argument reg
         assert((genRegMask(rAddr) & intRegState.rsCalleeRegArgMaskLiveIn) == 0);
+        assert(untrLclLo%4 == 0);
 
         if (emitter::emitIns_valid_imm_for_add(untrLclLo, EA_PTRSIZE))
         {
@@ -7073,6 +7082,13 @@ void CodeGen::genZeroInitFrame(int untrLclHi, int untrLclLo, regNumber initReg, 
             instGen_Set_Reg_To_Imm(EA_PTRSIZE, initReg, (ssize_t)untrLclLo);
             getEmitter()->emitIns_R_R_R(INS_daddu, EA_PTRSIZE, rAddr, genFramePointerReg(), initReg);
             *pInitRegZeroed = false;
+        }
+
+        if (padding)
+        {
+            assert(padding == 4);
+            getEmitter()->emitIns_R_R_I(INS_sw, EA_4BYTE, REG_R0, rAddr, 0);
+            uCntBytes -= 4;
         }
 
         if (useLoop)
@@ -7088,17 +7104,18 @@ void CodeGen::genZeroInitFrame(int untrLclHi, int untrLclLo, regNumber initReg, 
             while (uCntBytes >= REGSIZE_BYTES * 2)
             {
                 /* FIXME for MIPS: can be optimize further */
-                getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, 8);
-                getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, 0);
-                getEmitter()->emitIns_R_R_I(INS_daddiu, EA_PTRSIZE, rAddr, rAddr, 2 * REGSIZE_BYTES);
+                getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, 8 + padding);
+                getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, 0 + padding);
+                getEmitter()->emitIns_R_R_I(INS_daddiu, EA_PTRSIZE, rAddr, rAddr, 2 * REGSIZE_BYTES + padding);
                 uCntBytes -= REGSIZE_BYTES * 2;
+                padding = 0;
             }
         }
         else // useLoop is true
         {
             /* FIXME for MIPS: maybe optimize further */
-            getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, 8);
-            getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, 0);
+            getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, 8 + padding);
+            getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, 0 + padding);
             getEmitter()->emitIns_R_R_I(INS_daddiu, EA_PTRSIZE, rCnt, rCnt, -1);
             {
                 // bne rCnt, zero, -4 * 4

@@ -284,21 +284,12 @@ enum insOpts : unsigned
 
 enum insBarrier : unsigned
 {
-    INS_BARRIER_OSHLD =  1,
-    INS_BARRIER_OSHST =  2,
-    INS_BARRIER_OSH   =  3,
-
-    INS_BARRIER_NSHLD =  5,
-    INS_BARRIER_NSHST =  6,
-    INS_BARRIER_NSH   =  7,
-
-    INS_BARRIER_ISHLD =  9,
-    INS_BARRIER_ISHST = 10,
-    INS_BARRIER_ISH   = 11,
-
-    INS_BARRIER_LD    = 13,
-    INS_BARRIER_ST    = 14,
-    INS_BARRIER_SY    = 15,
+    INS_BARRIER_FULL  =  0,
+    INS_BARRIER_WMB   =  4,
+    INS_BARRIER_MB    =  16,
+    INS_BARRIER_ACQ   =  17,
+    INS_BARRIER_REL   =  18,
+    INS_BARRIER_RMB   =  19,
 };
 #endif
 

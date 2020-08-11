@@ -862,12 +862,12 @@ void replaceSafePointInstructionWithGcStressInstr(UINT32 safePointOffset, LPVOID
 
     // Is the call through a register or an immediate offset
     // bal
-    if ((instr & 0x0000) == 0x04110000)
+    if (((instr >> 26) & 0x3F) == 0x1 && ((instr >> 16) & 0x1F) == 0x11)
     {
         instructionIsACallThroughImmediate = TRUE;
     }
     // jalr
-    else if ((instr & 0x0000000F) == 0x00000009)
+    else if (((instr >> 26) & 0x3F) == 0x0 && (instr & 0x3F) == 0x9)
     {
         instructionIsACallThroughRegister = TRUE;
     }
@@ -1007,7 +1007,7 @@ bool replaceInterruptibleRangesWithGcStressInstr (UINT32 startOffset, UINT32 sto
             }
 
             instrPtr += instrLen;
-#elif defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
             // Do not replace with gcstress interrupt instruction at call to JIT_RareDisableHelper
             if(!isCallToStopForGCJitHelper(instrPtr))
                 *((DWORD*)instrPtr) = INTERRUPT_INSTR;
@@ -1077,7 +1077,50 @@ bool isCallToStopForGCJitHelper(PBYTE instrPtr)
         }
     }
 #elif defined(_TARGET_MIPS64_)
-    _ASSERTE(!"not implemented for MIPS64 platform");
+    if ((*reinterpret_cast<DWORD*>(instrPtr)) == 0x00000000) // Do we have a nop instruction?
+    {
+        return true;
+    }
+
+    if ((((*reinterpret_cast<DWORD*>(instrPtr)) >> 26) & 0x3F) == 0x0 && ((*reinterpret_cast<DWORD*>(instrPtr)) & 0x3F) == 0x9) // Do we have a jalr instruction?
+    {
+        DWORD target = 0x0;
+        unsigned int imm1 = 0x0, imm2 = 0x0;
+        // jalr    t9
+        unsigned int regnum = ((*reinterpret_cast<DWORD*>(instrPtr)) >> 21) & 0x1F;
+        instrPtr -= 4;
+        // ori    t9,at,0x3318
+        if ((((*reinterpret_cast<DWORD*>(instrPtr)) >> 26) & 0x3f) == 0xD) // Do we have a ori instruction?
+            target += (*reinterpret_cast<DWORD*>(instrPtr)) & 0xFFFF;
+        else
+            return false;
+        instrPtr -= 4;
+        // dsll    at,at,0x10
+        if ((((*reinterpret_cast<DWORD*>(instrPtr)) >> 26) & 0x3F) == 0x0 && ((*reinterpret_cast<DWORD*>(instrPtr)) & 0x3F) == 0x38) // Do we have a dsll instruction?
+            imm1 = ((*reinterpret_cast<DWORD*>(instrPtr)) >> 6) & 0x1F;
+        else
+            return false;
+        instrPtr -= 4;
+        // ori    at,at,0xf6a0
+        if ((((*reinterpret_cast<DWORD*>(instrPtr)) >> 26) & 0x3f) == 0xD) // Do we have a ori instruction?
+            target += ((*reinterpret_cast<DWORD*>(instrPtr)) & 0xFFFF) << imm1;
+        else
+            return false;
+        instrPtr -= 4;
+        // dsll    at,at,0x10
+        if ((((*reinterpret_cast<DWORD*>(instrPtr)) >> 26) & 0x3F) == 0x0 && ((*reinterpret_cast<DWORD*>(instrPtr)) & 0x3F) == 0x38) // Do we have a dsll instruction?
+            imm2 = ((*reinterpret_cast<DWORD*>(instrPtr)) >> 6) & 0x1F;
+        else
+            return false;
+        instrPtr -= 4;
+        // ori    at,at,0xff
+        if ((((*reinterpret_cast<DWORD*>(instrPtr)) >> 26) & 0x3f) == 0xD) // Do we have a ori instruction?
+            target += ((*reinterpret_cast<DWORD*>(instrPtr)) & 0xFFFF) << (imm2 + imm1);
+        else
+            return false;
+        if ((TADDR)target == GetEEFuncEntryPoint(JIT_RareDisableHelper))
+            return true;
+    }
 #endif
    return false;
 }
@@ -1145,7 +1188,23 @@ static PBYTE getTargetOfCall(PBYTE instrPtr, PCONTEXT regs, PBYTE* nextInstr) {
        return 0; // Fail
    }
 #elif defined(_TARGET_MIPS64_)
-    _ASSERTE(!"not implemented for MIPS64 platform");
+    if ((((*reinterpret_cast<DWORD*>(instrPtr)) >> 26) & 0x3F) == 0x1 && (((*reinterpret_cast<DWORD*>(instrPtr)) >> 16) & 0x1F) == 0x11)
+    {
+        int imm16 = (*reinterpret_cast<DWORD*>(instrPtr)) & 0xffff;
+        *nextInstr = instrPtr + 4;
+        return PC + imm16;
+    }
+    else if ((((*reinterpret_cast<DWORD*>(instrPtr)) >> 26) & 0x3F) == 0x0 && ((*reinterpret_cast<DWORD*>(instrPtr)) & 0x3F) == 0x9)
+    {
+        // call through register
+        *nextInstr = instrPtr + 4;
+        unsigned int regnum = ((*reinterpret_cast<DWORD*>(instrPtr)) >> 21) & 0x1F;
+        return (BYTE *)getRegVal(regnum, regs);
+    }
+    else
+    {
+        return 0; // Fail
+    }
 #endif
 
 #ifdef _TARGET_AMD64_
@@ -1383,7 +1442,7 @@ void RemoveGcCoverageInterrupt(TADDR instrPtr, BYTE * savedInstrPtr)
 #elif defined(_TARGET_ARM64_)
         *(DWORD *)instrPtr = *(DWORD *)savedInstrPtr;
 #elif defined(_TARGET_MIPS64_)
-        _ASSERTE(!"not implemented for MIPS64 platform");
+        //_ASSERTE(!"not implemented for MIPS64 platform");
         *(DWORD *)instrPtr = *(DWORD *)savedInstrPtr;
 #else
         *(BYTE *)instrPtr = *savedInstrPtr;
@@ -1547,7 +1606,6 @@ void DoGcStress (PCONTEXT regs, NativeCodeVersion nativeCodeVersion)
     afterCallProtect[0] = (instrVal == INTERRUPT_INSTR_PROTECT_RET);
 
 #elif defined(_TARGET_MIPS64_)
-    _ASSERTE(!"not implemented for MIPS64 platform");
     DWORD instrVal = *(DWORD *)instrPtr;
     forceStack[6] = &instrVal;            // This is so I can see it fastchecked
 

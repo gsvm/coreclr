@@ -183,6 +183,7 @@ typedef struct _Arm64VolatileContextPointer
 #if defined(_TARGET_MIPS64_)
 typedef struct _Mips64VolatileContextPointer
 {
+    PDWORD64 R0;
     PDWORD64 At;
     PDWORD64 V0;
     PDWORD64 V1;
@@ -468,6 +469,7 @@ inline void FillRegDisplay(const PREGDISPLAY pRD, PT_CONTEXT pctx, PT_CONTEXT pC
         pRD->volatileCurrContextPointers.X[i] = &pctx->X[i];
 #elif defined(_TARGET_MIPS64_) // _TARGET_ARM64_
     /* FIXME for MIPS */
+    pRD->volatileCurrContextPointers.R0 = &pctx->R0;
     pRD->volatileCurrContextPointers.At = &pctx->At;
     pRD->volatileCurrContextPointers.V0 = &pctx->V0;
     pRD->volatileCurrContextPointers.V1 = &pctx->V1;

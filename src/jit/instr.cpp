@@ -2344,7 +2344,7 @@ void CodeGen::instGen_MemoryBarrier()
 #elif defined(_TARGET_ARM64_)
     getEmitter()->emitIns_BARR(INS_dmb, barrierType);
 #elif defined(_TARGET_MIPS64_)
-    instGen(INS_sync);
+    getEmitter()->emitIns_I(INS_sync, EA_4BYTE, barrierType);
 #else
 #error "Unknown _TARGET_"
 #endif

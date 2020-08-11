@@ -4430,6 +4430,29 @@ void Thread::CommitGCStressInstructionUpdate()
 
         *(DWORD*)pbDestCode = *(DWORD*)pbSrcCode;
 
+#elif defined(_TARGET_MIPS64_)
+
+        *(DWORD*)pbDestCode = *(DWORD*)pbSrcCode;
+        //NOTE: not include likely and j and jal !!!
+        //
+        //b,beq; bal; bne;
+        if (((*(DWORD*)pbSrcCode >>26) == 4) || ((*(DWORD*)pbSrcCode >>16) == 0x411) || ((*(DWORD*)pbSrcCode >>26) == 0x5)
+        //bc1f; bc1t; bgez
+        || ((*(DWORD*)pbSrcCode & 0xffe30000) == 0x45000000) || ((*(DWORD*)pbSrcCode & 0xffe30000) == 0x45010000) || ((*(DWORD*)pbSrcCode & 0xfc1f0000) == 0x04010000)
+        //bgezal;bgtz;blez;
+        || ((*(DWORD*)pbSrcCode & 0xfc1f0000) == 0x04110000) || ((*(DWORD*)pbSrcCode & 0xfc1f0000) == 0x1c000000) || ((*(DWORD*)pbSrcCode & 0xfc1f0000) == 0x18000000)
+        //bltz;bltzal
+        || ((*(DWORD*)pbSrcCode & 0xfc1f0000) == 0x04000000) || ((*(DWORD*)pbSrcCode & 0xfc1f0000) == 0x04100000)
+        //jr, jr.hb;
+        || ((*(DWORD*)pbSrcCode & 0xfc1fffff) == 0x00000008) || ((*(DWORD*)pbSrcCode & 0xfc1fffff) == 0x00000408)
+        //jalr,jalr.hb
+        || ((*(DWORD*)pbSrcCode & 0xfc1f07ff) == 0x00000009) || ((*(DWORD*)pbSrcCode & 0xfc1f07ff) == 0x00000409))
+        {
+            FlushInstructionCache(GetCurrentProcess(), (LPCVOID)pbDestCode, 4);
+            pbSrcCode += 4;
+            pbDestCode += 4;
+            *(DWORD*)pbDestCode = *(DWORD*)pbSrcCode;
+        }
 #else
 
         *pbDestCode = *pbSrcCode;

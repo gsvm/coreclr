@@ -391,9 +391,9 @@ bool emitter::emitInsMayWriteToGCReg(instrDesc* id)
                 case MIPS_SPEC_SRAV:
                 //case MIPS_SPEC_MOVZ:
                 //case MIPS_SPEC_MOVN:
-                //case MIPS_SPEC_MFHI:
+                case MIPS_SPEC_MFHI:
                 //case MIPS_SPEC_MTHI:
-                //case MIPS_SPEC_MFLO:
+                case MIPS_SPEC_MFLO:
                 //case MIPS_SPEC_MTLO:
                 case MIPS_SPEC_DSLLV:
                 case MIPS_SPEC_DSRLV:
@@ -466,6 +466,17 @@ bool emitter::emitInsMayWriteToGCReg(instrDesc* id)
             }
             return false;
 
+        //alu
+        case MIPS_OP_SLTI:
+        case MIPS_OP_SLTIU:
+        case MIPS_OP_ANDI:
+        case MIPS_OP_ORI:
+        case MIPS_OP_XORI:
+        case MIPS_OP_LUI:
+        case MIPS_OP_ADDI:
+        case MIPS_OP_ADDIU:
+        case MIPS_OP_DADDI:
+        case MIPS_OP_DADDIU:
         //load
         case 0x20://INS_lb:
         case 0x24://INS_lbu:
@@ -3258,8 +3269,6 @@ void emitter::emitIns_R_C(
     assert(ins == INS_bal);//for special.
     assert(isGeneralRegister(reg));
 
-    emitAttr size = EA_SIZE(attr);
-
     // INS_OPTS_RC: placeholders.  4-ins:
     //   bal 4
     //   lui at, off-hi-16bits
@@ -3275,7 +3284,19 @@ void emitter::emitIns_R_C(
     id->idSmallCns(offs); //usually is 0.
     id->idInsOpt(INS_OPTS_RC);
 
-    id->idOpSize(size);
+    if (EA_IS_GCREF(attr))
+    {
+        /* A special value indicates a GCref pointer value */
+        id->idGCref(GCT_GCREF);
+        id->idOpSize(EA_PTRSIZE);
+    }
+    else if (EA_IS_BYREF(attr))
+    {
+        /* A special value indicates a Byref pointer value */
+        id->idGCref(GCT_BYREF);
+        id->idOpSize(EA_PTRSIZE);
+    }
+
     id->idSetIsBound(); // We won't patch address since we will know the exact distance
                         // once JIT code and data are allocated together.
 
@@ -3349,8 +3370,6 @@ void emitter::emitIns_R_AI(instruction ins, emitAttr attr, regNumber reg, ssize_
     assert(ins == INS_bal);//for special.
     assert(isGeneralRegister(reg));
 
-    emitAttr size = EA_SIZE(attr);
-
     // INS_OPTS_RELOC: placeholders.  4-ins:
     //   bal 4
     //   lui at, off-hi-16bits
@@ -3365,7 +3384,19 @@ void emitter::emitIns_R_AI(instruction ins, emitAttr attr, regNumber reg, ssize_
 
     id->idInsOpt(INS_OPTS_RELOC);
 
-    id->idOpSize(size);
+    if (EA_IS_GCREF(attr))
+    {
+        /* A special value indicates a GCref pointer value */
+        id->idGCref(GCT_GCREF);
+        id->idOpSize(EA_PTRSIZE);
+    }
+    else if (EA_IS_BYREF(attr))
+    {
+        /* A special value indicates a Byref pointer value */
+        id->idGCref(GCT_BYREF);
+        id->idOpSize(EA_PTRSIZE);
+    }
+
     id->idSetIsBound(); // We won't patch address since we will know the exact distance
                         // once JIT code and data are allocated together.
 
@@ -3493,7 +3524,19 @@ void emitter::emitIns_R_L(instruction ins, emitAttr attr, BasicBlock* dst, regNu
     id->idAddr()->iiaBBlabel = dst;
 
     id->idReg1(reg);
-    id->idOpSize(EA_PTRSIZE);
+
+    if (EA_IS_GCREF(attr))
+    {
+        /* A special value indicates a GCref pointer value */
+        id->idGCref(GCT_GCREF);
+        id->idOpSize(EA_PTRSIZE);
+    }
+    else if (EA_IS_BYREF(attr))
+    {
+        /* A special value indicates a Byref pointer value */
+        id->idGCref(GCT_BYREF);
+        id->idOpSize(EA_PTRSIZE);
+    }
 
 #ifdef DEBUG
     // Mark the catch return
@@ -3970,7 +4013,6 @@ unsigned emitter::emitOutputCall(insGroup* ig, BYTE* dst, instrDesc* id, code_t 
         VarSetOps::AssignNoCopy(emitComp, GCvars, VarSetOps::MakeEmpty(emitComp));
     }
 
-
     /* We update the GC info before the call as the variables cannot be
         used by the call. Killing variables before the call helps with
         boundary conditions if the call is CORINFO_HELP_THROW - see bug 50029.
@@ -4035,24 +4077,21 @@ unsigned emitter::emitOutputCall(insGroup* ig, BYTE* dst, instrDesc* id, code_t 
     unsigned outputInstrSize = emitOutput_Instr(dst, code);
     dst += outputInstrSize;
 
-
-    // All call instructions are 4-byte in size on MIPS64
-    //
-    assert(outputInstrSize == callInstrSize);
-
-    // If the GC register set has changed, report the new set.
+    // update volatile regs within emitThisGCrefRegs and emitThisByrefRegs.
     if (gcrefRegs != emitThisGCrefRegs)
     {
         emitUpdateLiveGCregs(GCT_GCREF, gcrefRegs, dst);
     }
-    // If the Byref register set has changed, report the new set.
     if (byrefRegs != emitThisByrefRegs)
     {
         emitUpdateLiveGCregs(GCT_BYREF, byrefRegs, dst);
     }
 
+    // All call instructions are 4-byte in size on MIPS64
+    // not including delay-slot which processed later.
+    assert(outputInstrSize == callInstrSize);
 
-    // If the method returns a GC ref, mark INTRET (R0) appropriately.
+    // If the method returns a GC ref, mark INTRET (V0) appropriately.
     if (id->idGCref() == GCT_GCREF)
     {
         gcrefRegs = emitThisGCrefRegs | RBM_INTRET;
@@ -4062,7 +4101,7 @@ unsigned emitter::emitOutputCall(insGroup* ig, BYTE* dst, instrDesc* id, code_t 
         byrefRegs = emitThisByrefRegs | RBM_INTRET;
     }
 
-    // If is a multi-register return method is called, mark INTRET_1 (X1) appropriately
+    // If is a multi-register return method is called, mark INTRET_1 (V1) appropriately
     if (id->idIsLargeCall())
     {
         instrDescCGCA* idCall = (instrDescCGCA*)id;
@@ -4079,12 +4118,12 @@ unsigned emitter::emitOutputCall(insGroup* ig, BYTE* dst, instrDesc* id, code_t 
     // If the GC register set has changed, report the new set.
     if (gcrefRegs != emitThisGCrefRegs)
     {
-        emitUpdateLiveGCregs(GCT_GCREF, gcrefRegs, dst+4);
+        emitUpdateLiveGCregs(GCT_GCREF, gcrefRegs, dst + 4);
     }
     // If the Byref register set has changed, report the new set.
     if (byrefRegs != emitThisByrefRegs)
     {
-        emitUpdateLiveGCregs(GCT_BYREF, byrefRegs, dst+4);
+        emitUpdateLiveGCregs(GCT_BYREF, byrefRegs, dst + 4);
     }
 
     // Some helper calls may be marked as not requiring GC info to be recorded.
@@ -4311,7 +4350,7 @@ LABEL_INS(bc1t)
 LABEL_INS_END(bc1f)
 
 LABEL_INS(sync)
-    code |= (reg[0] & 0x1f)<<6;//stype
+    code |= (imm[0] & 0x1f)<<6;//stype
 LABEL_INS_END(sync)
 
 LABEL_INS(ldxc1)
@@ -4649,6 +4688,7 @@ LABEL_INS_END(DONE)
 size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
 {
     BYTE* dst = *dp;
+    BYTE* dst2 = dst + 4;//addr for updating gc info if needed.
     code_t code = 0;
     size_t sz;// = emitSizeOfInsDsc(id);
 
@@ -4701,7 +4741,11 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             //regs[1] = REG_AT;
             regs[2] = REG_RA;
             *(code_t *)dst = emitInsOps(INS_daddu, regs, nullptr);
+
+            id->idAddr()->iiaSetInstrEncode(*(code_t *)dst);//used for emitInsMayWriteToGCReg().
+
             dst += 4;
+            dst2 = dst;
 
             sz  = sizeof(instrDescJmp);
         }
@@ -4749,7 +4793,11 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             regs[1] = REG_AT;
             regs[2] = REG_RA;
             *(code_t *)dst = emitInsOps(INS_daddu, regs, nullptr);
+
+            id->idAddr()->iiaSetInstrEncode(*(code_t *)dst);//used for emitInsMayWriteToGCReg().
             dst += 4;
+
+            dst2 = dst;
 
             sz  = sizeof(instrDescJmp);
         }
@@ -4805,7 +4853,10 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
                 *(code_t *)dst = emitInsOps(INS_daddu, regs, nullptr);
             }
 
+            id->idAddr()->iiaSetInstrEncode(*(code_t *)dst);//used for emitInsMayWriteToGCReg().
+
             dst += 4;
+            dst2 = dst;
             sz  = sizeof(instrDescJmp);
         }
             break;
@@ -4944,11 +4995,11 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
         // We assume that "idReg1" is the primary destination register for all instructions
         if (id->idGCref() != GCT_NONE)
         {
-            emitGCregLiveUpd(id->idGCref(), id->idReg1(), dst);
+            emitGCregLiveUpd(id->idGCref(), id->idReg1(), dst2);
         }
         else
         {
-            emitGCregDeadUpd(id->idReg1(), dst);
+            emitGCregDeadUpd(id->idReg1(), dst2);
         }
 
         //if (emitInsMayWriteMultipleRegs(id))
@@ -4957,11 +5008,11 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
         //    // "idReg2" is the secondary destination register
         //    if (id->idGCrefReg2() != GCT_NONE)
         //    {
-        //        emitGCregLiveUpd(id->idGCrefReg2(), id->idReg2(), dst);
+        //        emitGCregLiveUpd(id->idGCrefReg2(), id->idReg2(), *dp);
         //    }
         //    else
         //    {
-        //        emitGCregDeadUpd(id->idReg2(), dst);
+        //        emitGCregDeadUpd(id->idReg2(), *dp);
         //    }
         //}
     }
@@ -4976,7 +5027,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
         int      adr = emitComp->lvaFrameAddress(varNum, &FPbased);
         if (id->idGCref() != GCT_NONE)
         {
-            emitGCvarLiveUpd(adr + ofs, varNum, id->idGCref(), dst);
+            emitGCvarLiveUpd(adr + ofs, varNum, id->idGCref(), dst2);
         }
         else
         {
@@ -4993,14 +5044,14 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
                 vt              = tmpDsc->tdTempType();
             }
             if (vt == TYP_REF || vt == TYP_BYREF)
-                emitGCvarDeadUpd(adr + ofs, dst);
+                emitGCvarDeadUpd(adr + ofs, dst2);
         }
         //if (emitInsWritesToLclVarStackLocPair(id))
         //{
         //    unsigned ofs2 = ofs + TARGET_POINTER_SIZE;
         //    if (id->idGCrefReg2() != GCT_NONE)
         //    {
-        //        emitGCvarLiveUpd(adr + ofs2, varNum, id->idGCrefReg2(), dst);
+        //        emitGCvarLiveUpd(adr + ofs2, varNum, id->idGCrefReg2(), *dp);
         //    }
         //    else
         //    {
@@ -5017,7 +5068,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
         //            vt              = tmpDsc->tdTempType();
         //        }
         //        if (vt == TYP_REF || vt == TYP_BYREF)
-        //            emitGCvarDeadUpd(adr + ofs2, dst);
+        //            emitGCvarDeadUpd(adr + ofs2, *dp);
         //    }
         //}
     }

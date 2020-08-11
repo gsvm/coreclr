@@ -201,6 +201,7 @@ LEAF_END JIT_PatchedCodeLast, _TEXT
 WRITE_BARRIER_ENTRY JIT_WriteBarrier
     .set noreorder
 
+    sync 18
     sd  v1, 0(v0)
 
     lui  gp, %hi(%neg(%gp_rel(JIT_WriteBarrier)))
@@ -229,7 +230,7 @@ WRITE_BARRIER_ENTRY JIT_WriteBarrier
     ld  t3, 0(t3)
 
     slt  AT, t0, t3
-    bne  AT, zero, 22f //LOCAL_LABEL(ShadowUpdateEnd)
+    beq  AT, zero, 22f //LOCAL_LABEL(ShadowUpdateEnd)
     nop
 
     // *pShadow = v1

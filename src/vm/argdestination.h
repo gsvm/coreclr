@@ -296,7 +296,6 @@ public:
 
 
 #ifndef DACCESS_COMPILE
-/*
     // Zero struct argument stored in registers described by the current ArgDestination.
     // Arguments:
     //  fieldBytes - size of the structure
@@ -312,12 +311,43 @@ public:
         // of dealing with the eightbyte classification in single function.
         // This function is used rarely and so the overhead of reading the zeros from
         // the stack is negligible.
-        long long zeros[CLR_SYSTEMV_MAX_EIGHTBYTES_COUNT_TO_PASS_IN_REGISTERS] = {};
-        _ASSERTE(sizeof(zeros) >= (size_t)fieldBytes);
+        _ASSERTE(IsStructPassedInRegs());
 
-        CopyStructToRegisters(zeros, fieldBytes, 0);
+        BYTE* genRegDest = (BYTE*)GetStructGenRegDestinationAddress();
+        BYTE* floatRegDest = (BYTE*)GetStructFloatRegDestinationAddress();
+        BYTE* stackDest = (BYTE*)GetStructStackDestinationAddress();
+
+        EEClass* eeClass = m_argLocDescForStructInRegs->m_eeClass;
+        _ASSERTE(eeClass != NULL);
+
+        int stackSlot = 0;
+        for (int i = 0; i < eeClass->GetNumberEightBytes(); i++)
+        {
+            if (m_argLocDescForStructInRegs->m_idxGenReg + i < 8)
+            {
+                MIPS64ClassificationType eightByteClassification = eeClass->GetEightByteClassification(i);
+
+                if (eightByteClassification == MIPS64ClassificationTypeDouble)
+                {
+                    *(UINT64*)floatRegDest = (UINT64)0;
+                    floatRegDest += 8;
+                }
+                else
+                {
+                    _ASSERTE(IS_ALIGNED((SIZE_T)genRegDest, 8));
+                    *(UINT64*)genRegDest = (UINT64)0;
+                    genRegDest += 8;
+                }
+            }
+            else
+            {
+                _ASSERTE(stackSlot < m_argLocDescForStructInRegs->m_cStack);
+                *(UINT64*)stackDest = (UINT64)0;
+                stackDest += 8;
+                stackSlot++;
+            }
+        }
     }
-*/
 
     // Copy struct argument into registers described by the current ArgDestination.
     // Arguments:
@@ -333,54 +363,69 @@ public:
         STATIC_CONTRACT_MODE_COOPERATIVE;
 
         _ASSERTE(IsStructPassedInRegs());
-        // Is it useful for MIPS? It must be zero temporarily.
-        _ASSERTE(destOffset == 0);
 
-        BYTE* genRegDest = (BYTE*)GetStructGenRegDestinationAddress();
-        BYTE* floatRegDest = (BYTE*)GetStructFloatRegDestinationAddress();
+        BYTE* genRegDest = (BYTE*)GetStructGenRegDestinationAddress() + destOffset;
+        BYTE* floatRegDest = (BYTE*)GetStructFloatRegDestinationAddress() + destOffset;
         BYTE* stackDest = (BYTE*)GetStructStackDestinationAddress();
         INDEBUG(int remainingBytes = fieldBytes;)
 
         EEClass* eeClass = m_argLocDescForStructInRegs->m_eeClass;
         _ASSERTE(eeClass != NULL);
 
-        int stackSlot = 0;
-        // We start at the first eightByte that the destOffset didn't skip completely.
-        for (int i = destOffset / 8; i < eeClass->GetNumberEightBytes(); i++)
+        if (destOffset != 0)
         {
-            if (m_argLocDescForStructInRegs->m_idxGenReg + i < 8)
+            _ASSERTE(destOffset <= 8); // Nullable<T>, if size of T is more than 8, need deal with it.
+            if (m_argLocDescForStructInRegs->m_idxGenReg + (destOffset/8) < 8)
             {
-                //int eightByteSize = eeClass->GetEightByteSize(i);
-                MIPS64ClassificationType eightByteClassification = eeClass->GetEightByteClassification(i);
-
-                // Adjust the size of the first eightByte by the destOffset
-                //eightByteSize -= (destOffset & 7);
-                //destOffset = 0;
-
-                //_ASSERTE(remainingBytes >= eightByteSize);
-
+                MIPS64ClassificationType eightByteClassification = eeClass->GetEightByteClassification(destOffset/8);
                 if (eightByteClassification == MIPS64ClassificationTypeDouble)
                 {
-                    *(UINT64*)floatRegDest = *(UINT64*)src;
-                    floatRegDest += 8;
+                    memcpyNoGCRefs(floatRegDest, src, fieldBytes);
                 }
                 else
                 {
-                    _ASSERTE(IS_ALIGNED((SIZE_T)genRegDest, 8));
-                    *(UINT64*)genRegDest = *(UINT64*)src;
-                    genRegDest += 8;
+                    memcpyNoGCRefs(genRegDest, src, fieldBytes);
                 }
             }
             else
             {
-                _ASSERTE(stackSlot < m_argLocDescForStructInRegs->m_cStack);
-                *(UINT64*)stackDest = *(UINT64*)src;
-                stackDest += 8;
-                stackSlot++;
+                memcpyNoGCRefs(stackDest, src, fieldBytes);
             }
 
-            src = (BYTE*)src + 8;
-            INDEBUG(remainingBytes -= 8;)
+            INDEBUG(remainingBytes -= fieldBytes;)
+        }
+        else
+        {
+            int stackSlot = 0;
+            for (int i = 0; i < eeClass->GetNumberEightBytes(); i++)
+            {
+                if (m_argLocDescForStructInRegs->m_idxGenReg + i < 8)
+                {
+                    MIPS64ClassificationType eightByteClassification = eeClass->GetEightByteClassification(i);
+
+                    if (eightByteClassification == MIPS64ClassificationTypeDouble)
+                    {
+                        *(UINT64*)floatRegDest = *(UINT64*)src;
+                        floatRegDest += 8;
+                    }
+                    else
+                    {
+                        _ASSERTE(IS_ALIGNED((SIZE_T)genRegDest, 8));
+                        *(UINT64*)genRegDest = *(UINT64*)src;
+                        genRegDest += 8;
+                    }
+                }
+                else
+                {
+                    _ASSERTE(stackSlot < m_argLocDescForStructInRegs->m_cStack);
+                    *(UINT64*)stackDest = *(UINT64*)src;
+                    stackDest += 8;
+                    stackSlot++;
+                }
+
+                src = (BYTE*)src + 8;
+                INDEBUG(remainingBytes -= 8;)
+            }
         }
 
         _ASSERTE(remainingBytes <= 0);
@@ -388,6 +433,8 @@ public:
 
 #endif //DACCESS_COMPILE
 
+    // FIXME for MIPS: It may be not useful.
+/*
     // Report managed object pointers in the struct in registers
     // Arguments:
     //  fn - promotion function to apply to each managed object pointer
@@ -447,6 +494,7 @@ public:
 
         //_ASSERTE(remainingBytes <= 0);
     }
+*/
 
 #endif // _TARGET_MIPS64_
 

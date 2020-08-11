@@ -190,7 +190,7 @@ BOOL GcInfoDumper::ReportPointerRecord (
 #elif defined(_TARGET_MIPS64_)
 #undef REG
 #define REG(reg, field) { FIELD_OFFSET(Mips64VolatileContextPointer, field) }
-        //REG(zero, R0),
+        REG(zero, R0),
         REG(at, At),
         REG(v0, V0),
         REG(v1, V1),

@@ -281,6 +281,7 @@ static BranchInstructionFormat gBranchIF;
 
 void ClearRegDisplayArgumentAndScratchRegisters(REGDISPLAY * pRD)
 {
+    pRD->volatileCurrContextPointers.R0 = NULL;
     pRD->volatileCurrContextPointers.At = NULL;
     pRD->volatileCurrContextPointers.V0 = NULL;
     pRD->volatileCurrContextPointers.V1 = NULL;
@@ -985,6 +986,7 @@ void ResumableFrame::UpdateRegDisplay(const PREGDISPLAY pRD)
     pRD->pCurrentContextPointers->Fp = &m_Regs->Fp;
     pRD->pCurrentContextPointers->Ra = &m_Regs->Ra;
 
+    pRD->volatileCurrContextPointers.R0 = &m_Regs->R0;
     pRD->volatileCurrContextPointers.At = &m_Regs->At;
     pRD->volatileCurrContextPointers.V0 = &m_Regs->V0;
     pRD->volatileCurrContextPointers.V1 = &m_Regs->V1;
@@ -1617,7 +1619,7 @@ void StubLinkerCPU::EmitUnboxMethodStub(MethodDesc *pMD)
 
 #define END_DYNAMIC_HELPER_EMIT() \
     _ASSERTE(pStart + cb == p); \
-    while (p < pStart + cbAligned) { *(DWORD*)p = 0xBADC0DF0; p += 4; }\
+    while (p < pStart + cbAligned) { *(DWORD*)p = 0x42000029; p += 4; }\
     ClrFlushInstructionCache(pStart, cbAligned); \
     return (PCODE)pStart
 

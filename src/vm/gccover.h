@@ -109,9 +109,9 @@ typedef DPTR(GCCoverageInfo) PTR_GCCoverageInfo; // see code:GCCoverageInfo::sav
 #elif defined(_TARGET_MIPS64_)
 
 // The following encodings are undefined.
-#define INTERRUPT_INSTR                 0xffffffff
-#define INTERRUPT_INSTR_CALL            0xfffffffe
-#define INTERRUPT_INSTR_PROTECT_RET     0xfffffffd
+#define INTERRUPT_INSTR                 0x42000029
+#define INTERRUPT_INSTR_CALL            0x4200002A
+#define INTERRUPT_INSTR_PROTECT_RET     0x4200002B
 
 #endif // _TARGET_*
 

@@ -1707,8 +1707,6 @@ OBJECTREF* GcInfoDecoder::GetCapturedRegister(
 
 #elif defined(_TARGET_MIPS64_)
 
-#pragma message("unimplemented on MIPS yet")
-
 #ifdef FEATURE_PAL
 OBJECTREF* GcInfoDecoder::GetCapturedRegister(
     int             regNum,
@@ -1731,15 +1729,14 @@ OBJECTREF* GcInfoDecoder::GetRegisterSlot(
                         PREGDISPLAY     pRD
                         )
 {
-    ////PORTABILITY_ASSERT("GcInfoDecoder::GetRegisterSlot, MIPS.");
     _ASSERTE(regNum >= 1 && regNum <= 31);
 
     DWORD64 **ppReg;
 
     if (regNum < 16) //t3
     {
-        ppReg = &pRD->volatileCurrContextPointers.At;
-        return (OBJECTREF*)*(ppReg + (regNum-1));
+        ppReg = &pRD->volatileCurrContextPointers.R0;
+        return (OBJECTREF*)*(ppReg + regNum);
     }
     else if (regNum == 24) //t8
     {
