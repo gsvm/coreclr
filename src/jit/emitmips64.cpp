@@ -1925,20 +1925,16 @@ void emitter::emitIns_S_R(instruction ins, emitAttr attr, regNumber reg1, int va
     switch (ins)
     {
         case INS_sb:
-            assert(size == EA_1BYTE);
             break;
         case INS_sh:
-            assert(size == EA_2BYTE);
             break;
         case INS_sw:
         case INS_swc1:
         //case INS_swl:
         //case INS_swr:
-            assert(size == EA_4BYTE);
             break;
         case INS_sd:
         case INS_sdc1:
-            assert(size == EA_8BYTE);
             break;
 
         default:
@@ -1987,26 +1983,22 @@ void emitter::emitIns_R_S(instruction ins, emitAttr attr, regNumber reg1, int va
         case INS_sb:
         case INS_lb:
         case INS_lbu:
-            assert(size == EA_1BYTE);
             break;
 
         case INS_sh:
         case INS_lh:
         case INS_lhu:
-            assert(size == EA_2BYTE);
             break;
 
         case INS_sw:
         case INS_lw:
         case INS_lwu:
         case INS_lwc1:
-            assert(size == EA_4BYTE);
             break;
 
         case INS_sd:
         case INS_ld:
         case INS_ldc1:
-            assert(size == EA_8BYTE);
             //assert(isValidGeneralDatasize(size) || isValidVectorDatasize(size));
             break;
 
@@ -4711,9 +4703,9 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
         {
             instrDescJmp* jmp = (instrDescJmp*) id;
             //   bal 4
-            //   lui at, off-hi-16bits
-            //   ori at, at, off-lo-16bits
-            //   daddu  reg, at, ra
+            //   lui reg, off-hi-16bits
+            //   ori reg, reg, off-lo-16bits
+            //   daddu  reg, reg, ra
             ssize_t imm = 4;
             *(code_t *)dst = emitInsOps(INS_bal, nullptr, &imm);
             dst += 4;
@@ -4727,18 +4719,39 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             assert(addrOffs < 0x7fffffff);
             assert(-((int64_t)1<<31) < addrOffs);
 
-            regs[0] = REG_AT;
+            //regs[0] = REG_AT;
+            regs[0] = jmp->idReg1();
 
             imm = addrOffs >> 16;
             *(code_t *)dst = emitInsOps(INS_lui, regs, &imm);
             dst += 4;
 
-            regs[1] = REG_AT;
+            if (id->idGCref() != GCT_NONE)
+            {
+                emitGCregLiveUpd(id->idGCref(), id->idReg1(), dst);
+            }
+            else
+            {
+                emitGCregDeadUpd(id->idReg1(), dst);
+            }
+
+            //regs[1] = REG_AT;
+            regs[1] = jmp->idReg1();
             *(code_t *)dst = emitInsOps(INS_ori, regs, (ssize_t*) &addrOffs);
             dst += 4;
 
-            regs[0] = jmp->idReg1();
-            //regs[1] = REG_AT;
+            if (id->idGCref() != GCT_NONE)
+            {
+                emitGCregLiveUpd(id->idGCref(), id->idReg1(), dst);
+            }
+            else
+            {
+                emitGCregDeadUpd(id->idReg1(), dst);
+            }
+
+            //regs[0] = jmp->idReg1();
+            //regs[1] = jmp->idReg1();
+            ////regs[1] = REG_AT;
             regs[2] = REG_RA;
             *(code_t *)dst = emitInsOps(INS_daddu, regs, nullptr);
 
@@ -8522,7 +8535,7 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
         ssize_t imm;
 
         // n * n bytes will store n bytes result
-        emitIns_R_R(ins, attr, src1->gtRegNum, src2->gtRegNum);
+        emitIns_R_R(ins, EA_SIZE(attr), src1->gtRegNum, src2->gtRegNum);
         emitIns_R(INS_mflo, attr, dst->gtRegNum);
 
         if (needCheckOv)
@@ -8545,7 +8558,7 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
             else
             {
                 emitIns_R(INS_mfhi, attr, REG_AT);
-                emitIns_R_R_I(attr == EA_8BYTE ? INS_dsra32 : INS_sra, attr, REG_T0, dst->gtRegNum, 31);
+                emitIns_R_R_I(EA_SIZE(attr) == EA_8BYTE ? INS_dsra32 : INS_sra, attr, REG_T0, dst->gtRegNum, 31);
 
                 imm = emitComp->fgUseThrowHelperBlocks() ? (7<<2) : (9 << 2);
                 emitIns_R_R_I(INS_beq, EA_PTRSIZE, REG_AT, REG_T0, imm);
@@ -8558,7 +8571,7 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
     }
     else if (dst->OperGet() == GT_DIV || dst->OperGet() == GT_UDIV || dst->OperGet() == GT_MOD || dst->OperGet() == GT_UMOD)
     {
-        emitIns_R_R(ins, attr, src1->gtRegNum, src2->gtRegNum);
+        emitIns_R_R(ins, EA_SIZE(attr), src1->gtRegNum, src2->gtRegNum);
 
         if (dst->OperGet() == GT_DIV || dst->OperGet() == GT_UDIV)
             emitIns_R(INS_mflo, attr, dst->gtRegNum);

@@ -833,8 +833,8 @@ void TransitionFrame::UpdateRegDisplay(const PREGDISPLAY pRD)
     ClearRegDisplayArgumentAndScratchRegisters(pRD);
 
     // copy the control registers
-    pRD->pCurrentContext->Fp = pCalleeSaved->fp;
-    pRD->pCurrentContext->Ra = pCalleeSaved->ra;
+    //pRD->pCurrentContext->Fp = pCalleeSaved->fp;//not needed for duplicated.
+    //pRD->pCurrentContext->Ra = pCalleeSaved->ra;//not needed for duplicated.
     pRD->pCurrentContext->Pc = GetReturnAddress();
     pRD->pCurrentContext->Sp = this->GetSP();
 

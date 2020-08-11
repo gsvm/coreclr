@@ -7030,7 +7030,6 @@ void CodeGen::genZeroInitFrame(int untrLclHi, int untrLclLo, regNumber initReg, 
 #endif // !UNIX_AMD64_ABI
 
 #elif defined(_TARGET_MIPS64_)
-        /* FIXME for MIPS */
 
         regNumber rAddr;
         regNumber rCnt = REG_NA; // Invalid
@@ -7130,11 +7129,11 @@ void CodeGen::genZeroInitFrame(int untrLclHi, int untrLclLo, regNumber initReg, 
         {
             if ((uCntBytes - REGSIZE_BYTES) == 0)
             {
-                getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, 0);
+                getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, padding);
             }
             else
             {
-                getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, 0);
+                getEmitter()->emitIns_R_R_I(INS_sd, EA_PTRSIZE, REG_R0, rAddr, padding);
                 getEmitter()->emitIns_R_R_I(INS_daddiu, EA_PTRSIZE, rAddr, rAddr, REGSIZE_BYTES);
             }
             uCntBytes -= REGSIZE_BYTES;
@@ -7142,7 +7141,8 @@ void CodeGen::genZeroInitFrame(int untrLclHi, int untrLclLo, regNumber initReg, 
         if (uCntBytes > 0)
         {
             assert(uCntBytes == sizeof(int));
-            getEmitter()->emitIns_R_R_I(INS_sw, EA_4BYTE, REG_R0, rAddr, 0);
+            assert(padding == sizeof(int));
+            getEmitter()->emitIns_R_R_I(INS_sw, EA_4BYTE, REG_R0, rAddr, padding);
             uCntBytes -= sizeof(int);
         }
         noway_assert(uCntBytes == 0);

@@ -1,17 +1,8 @@
 #
 # Copyright (c) Loongson Technology. All rights reserved.
 #
-baseservices/threading/interlocked/add/InterlockedAddLongWithSubtract/InterlockedAddLongWithSubtract.sh mips64 # unstable on mips
-baseservices/threading/interlocked/compareexchange/compareexchange2/compareexchange2.sh mips64 # failed when checked crossgen
-baseservices/threading/interlocked/compareexchange/compareexchange3/compareexchange3.sh mips64 # failed when checked crossgen
 baseservices/threading/interlocked/compareexchange/CompareExchangeTClass_1/CompareExchangeTClass_1.sh mips64  #12739 failed on mips64
 baseservices/threading/interlocked/compareexchange/CompareExchangeTString/CompareExchangeTString.sh mips64  #12739 failed on mips64
-baseservices/threading/interlocked/exchange/exchange2/exchange2.sh mips64 # failed when checked crossgen
-baseservices/threading/interlocked/exchange/exchange3/exchange3.sh mips64 # failed when checked crossgen
-baseservices/threading/interlocked/read/readthreads/readthreads.sh mips64 # failed when debug crossgen
-CoreMangLib/system/runtime/interopservices/marshal/MarshalSizeOf1_PSC/MarshalSizeOf1_PSC.sh mips64 # failed when checked crossgen
-CoreMangLib/system/threading/interlocked/InterlockedCompareExchange7/InterlockedCompareExchange7.sh mips64 # failed when checked crossgen
-CoreMangLib/system/threading/interlocked/InterlockedExchange7/InterlockedExchange7.sh mips64 # failed when checked crossgen
 GC/Coverage/271010/271010.sh x64 mips64 #12863 failed item on x64 and mips64
 GC/Features/LOHFragmentation/lohfragmentation/lohfragmentation.sh x64 mips64 #12863 failed item on x64 and mips64
 GC/LargeMemory/Allocation/finalizertest/finalizertest.sh x64 mips64 #12863 failed item on x64 and mips64
@@ -19,13 +10,7 @@ GC/LargeMemory/API/gc/collect/collect.sh x64 mips64 #12863 failed item on x64 an
 GC/LargeMemory/API/gc/getgeneration/getgeneration.sh x64 mips64 #12863 failed item on x64 and mips64
 GC/Regressions/dev10bugs/536168/536168/536168.sh x64 mips64 #12863 failed item on x64 and mips64
 Interop/ExecInDefAppDom/ExecInDefAppDom/ExecInDefAppDom.sh x64 mips64 #12863 failed item on x64 and mips64
-Interop/NativeCallable/NativeCallableTest/NativeCallableTest.sh mips64  #12725 blocked on mips64
 JIT/Directed/arglist/vararg/vararg.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/Directed/coverage/oldtests/cse2_cs_d/cse2_cs_d.sh mips64 # failed when checked crossgen
-JIT/Directed/coverage/oldtests/cse2_cs_do/cse2_cs_do.sh mips64 # failed when checked crossgen
-JIT/Directed/coverage/oldtests/cse2_cs_r/cse2_cs_r.sh mips64 # failed when checked crossgen
-JIT/Directed/coverage/oldtests/cse2_cs_ro/cse2_cs_ro.sh mips64 # failed when checked crossgen
-JIT/Directed/Misc/function_pointer/MutualThdRecur-fptr/MutualThdRecur-fptr.sh mips64  #12725 blocked on mips64
 JIT/Directed/nullabletypes/boxunboxinterface_d/boxunboxinterface_d.sh mips64 # failed when crossgen
 JIT/Directed/nullabletypes/boxunboxinterface_do/boxunboxinterface_do.sh mips64 # failed when crossgen
 JIT/Directed/nullabletypes/boxunboxinterface_r/boxunboxinterface_r.sh mips64 # failed when crossgen
@@ -41,43 +26,14 @@ JIT/Directed/nullabletypes/castclassvaluetype_ro/castclassvaluetype_ro.sh mips64
 JIT/Directed/nullabletypes/Desktop/boxunboxvaluetype_do/boxunboxvaluetype_do.sh mips64 # failed when crossgen
 JIT/Directed/nullabletypes/Desktop/boxunboxvaluetype_r/boxunboxvaluetype_r.sh mips64 # failed when crossgen
 JIT/Directed/nullabletypes/Desktop/boxunboxvaluetype_ro/boxunboxvaluetype_ro.sh mips64 # failed when crossgen
+JIT/Directed/perffix/primitivevt/mixed1_cs_do/mixed1_cs_do.sh mips64 #14049 crossgen
+JIT/Directed/perffix/primitivevt/mixed1_cs_ro/mixed1_cs_ro.sh mips64 #14049 crossgen
 JIT/Directed/PREFIX/unaligned/1/arglist/arglist.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Directed/PREFIX/unaligned/2/arglist/arglist.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Directed/PREFIX/unaligned/4/arglist/arglist.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Directed/PREFIX/volatile/1/arglist/arglist.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/HardwareIntrinsics/General/Vector128_1/Vector128_1_ro/Vector128_1_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector128_1/Vector128_1_r/Vector128_1_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector128/Vector128_ro/Vector128_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector128/Vector128_r/Vector128_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector256_1/Vector256_1_ro/Vector256_1_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector256_1/Vector256_1_r/Vector256_1_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector256/Vector256_ro/Vector256_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector256/Vector256_r/Vector256_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector64_1/Vector64_1_ro/Vector64_1_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector64_1/Vector64_1_r/Vector64_1_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector64/Vector64_ro/Vector64_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/General/Vector64/Vector64_r/Vector64_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Avx2/Avx2_r/Avx2_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Avx2/Avx2_ro/Avx2_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Avx/Avx_r/Avx_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Avx/Avx_ro/Avx_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Avx_Vector128/Avx_r/Avx_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Avx_Vector128/Avx_ro/Avx_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Fma_Vector128/Fma_r/Fma_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Fma_Vector128/Fma_ro/Fma_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Fma_Vector256/Fma_r/Fma_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Fma_Vector256/Fma_ro/Fma_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Sse2/Sse2_ro/Sse2_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Sse2/Sse2_r/Sse2_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Sse2.X64/Sse2.X64_ro/Sse2.X64_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Sse2.X64/Sse2.X64_r/Sse2.X64_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Sse3/Sse3_ro/Sse3_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Sse3/Sse3_r/Sse3_r.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Sse41/Sse41_ro/Sse41_ro.sh mips64 # failed when checked crossgen
-JIT/HardwareIntrinsics/X86/Sse41/Sse41_r/Sse41_r.sh mips64 # failed when checked crossgen
 JIT/IL_Conformance/Old/Conformance_Base/conv_ovf_i8_i/conv_ovf_i8_i.sh mips64  #12739 failed on mips64
 JIT/jit64/mcc/interop/mcc_i00/mcc_i00.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/jit64/opt/rngchk/ArrayWithThread_o/ArrayWithThread_o.sh mips64  #12739 failed on mips64
 JIT/jit64/valuetypes/nullable/box-unbox/box-unbox/box-unbox013/box-unbox013.sh mips64 # failed when crossgen
 JIT/jit64/valuetypes/nullable/box-unbox/generics/box-unbox-generics013/box-unbox-generics013.sh mips64 # failed when crossgen
 JIT/jit64/valuetypes/nullable/box-unbox/interface/box-unbox-interface018/box-unbox-interface018.sh mips64 # failed when crossgen
@@ -85,96 +41,34 @@ JIT/jit64/valuetypes/nullable/box-unbox/value/box-unbox-value013/box-unbox-value
 JIT/jit64/valuetypes/nullable/castclass/castclass/castclass013/castclass013.sh mips64 # failed when crossgen
 JIT/jit64/valuetypes/nullable/castclass/generics/castclass-generics013/castclass-generics013.sh mips64 # failed when crossgen
 JIT/jit64/valuetypes/nullable/castclass/interface/castclass-interface018/castclass-interface018.sh mips64 # failed when crossgen
-JIT/Methodical/Boxing/functional/_dbgsin_cs/_dbgsin_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/functional/_dbgsin_il/_dbgsin_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/functional/_odbgsin_cs/_odbgsin_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/functional/_orelsin_cs/_orelsin_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/functional/_relsin_cs/_relsin_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/functional/_relsin_il/_relsin_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/morph/_dbgsin_cs/_dbgsin_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/morph/_odbgsin_cs/_odbgsin_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/morph/_orelsin_cs/_orelsin_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/morph/_relsin_cs/_relsin_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/morph/sin3double/sin3double.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/seh/_dbgfault/_dbgfault.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/seh/_dbgfilter/_dbgfilter.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/seh/_dbgtry_cs/_dbgtry_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/seh/_dbgtry_il/_dbgtry_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/seh/_odbgtry_cs/_odbgtry_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/seh/_oreltry_cs/_oreltry_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/seh/_relfault/_relfault.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/seh/_relfilter/_relfilter.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/seh/_reltry_cs/_reltry_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/seh/_reltry_il/_reltry_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_dbgsin_cs_cs/_dbgsin_cs_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_dbgsin_cs_il/_dbgsin_cs_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_dbgsin_il_cs/_dbgsin_il_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_dbgsin_il_il/_dbgsin_il_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_odbgsin_cs_cs/_odbgsin_cs_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_odbgsin_cs_il/_odbgsin_cs_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_odbgsin_il_cs/_odbgsin_il_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_odbgsin_il_il/_odbgsin_il_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_orelsin_cs_cs/_orelsin_cs_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_orelsin_cs_il/_orelsin_cs_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_orelsin_il_cs/_orelsin_il_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_orelsin_il_il/_orelsin_il_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_relsin_cs_cs/_relsin_cs_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_relsin_cs_il/_relsin_cs_il.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_relsin_il_cs/_relsin_il_cs.sh mips64 # failed when checked crossgen
-JIT/Methodical/Boxing/xlang/_relsin_il_il/_relsin_il_il.sh mips64 # failed when checked crossgen
 JIT/Methodical/Coverage/arglist_pos/arglist_pos.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Methodical/flowgraph/dev10_bug679955/volatileLocal1/volatileLocal1.sh mips64  #12739 failed on mips64
-JIT/Methodical/fp/apps/bouncingball_cs_d/bouncingball_cs_d.sh mips64 # failed when checked crossgen
-JIT/Methodical/fp/apps/bouncingball_cs_do/bouncingball_cs_do.sh mips64 # failed when checked crossgen
-JIT/Methodical/fp/apps/bouncingball_cs_r/bouncingball_cs_r.sh mips64 # failed when checked crossgen
-JIT/Methodical/fp/apps/bouncingball_cs_ro/bouncingball_cs_ro.sh mips64 # failed when checked crossgen
 JIT/Methodical/fp/exgen/1000w1d_cs_do/1000w1d_cs_do.sh mips64 # failed when crossgen
 JIT/Methodical/fp/exgen/1000w1d_cs_ro/1000w1d_cs_ro.sh mips64 # failed when crossgen
-JIT/Methodical/fp/exgen/10w5d_cs_d/10w5d_cs_d.sh mips64 # failed when crossgen and skipcrossgen
 JIT/Methodical/fp/exgen/10w5d_cs_do/10w5d_cs_do.sh mips64 # failed when crossgen and skipcrossgen
-JIT/Methodical/fp/exgen/10w5d_cs_r/10w5d_cs_r.sh mips64 # failed when crossgen and skipcrossgen
 JIT/Methodical/fp/exgen/10w5d_cs_ro/10w5d_cs_ro.sh mips64 # failed when crossgen and skipcrossgen
 JIT/Methodical/fp/exgen/200w1d-02_cs_do/200w1d-02_cs_do.sh mips64 # failed when crossgen
 JIT/Methodical/fp/exgen/200w1d-02_cs_ro/200w1d-02_cs_ro.sh mips64 # failed when crossgen
-JIT/Methodical/MDArray/basics/stringarr_cs_do/stringarr_cs_do.sh mips64 # failed when checked crossgen
-JIT/Methodical/MDArray/basics/stringarr_cs_d/stringarr_cs_d.sh mips64 # failed when checked crossgen
-JIT/Methodical/MDArray/basics/stringarr_cs_ro/stringarr_cs_ro.sh mips64 # failed when checked crossgen
-JIT/Methodical/MDArray/basics/stringarr_cs_r/stringarr_cs_r.sh mips64 # failed when checked crossgen
-JIT/Methodical/NaN/intrinsic_cs_d/intrinsic_cs_d.sh mips64 # failed when checked crossgen
-JIT/Methodical/NaN/intrinsic_cs_do/intrinsic_cs_do.sh mips64 # failed when checked crossgen
-JIT/Methodical/NaN/intrinsic_cs_r/intrinsic_cs_r.sh mips64 # failed when checked crossgen
-JIT/Methodical/NaN/intrinsic_cs_ro/intrinsic_cs_ro.sh mips64 # failed when checked crossgen
-JIT/Methodical/NaN/intrinsic_nonf_il_d/intrinsic_nonf_il_d.sh mips64 # failed when checked crossgen
-JIT/Methodical/NaN/intrinsic_nonf_il_r/intrinsic_nonf_il_r.sh mips64 # failed when checked crossgen
 JIT/Methodical/refany/_il_dbgseq/_il_dbgseq.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Methodical/refany/_il_relseq/_il_relseq.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/opt/Inline/tests/mathfunc/mathfunc.sh mips64 # failed when checked crossgen
 JIT/opt/ObjectStackAllocation/ObjectStackAllocationTests/ObjectStackAllocationTests.sh mips64 # blocked on mips when crossgen
-JIT/Performance/CodeQuality/BenchmarksGame/regex-redux/regex-redux-5/regex-redux-5.sh mips64  #12739 failed on mips64
-JIT/Performance/CodeQuality/Benchstones/BenchF/Adams/Adams/Adams.sh mips64 # failed when checked crossgen
-JIT/Performance/CodeQuality/Roslyn/CscBench/CscBench.sh mips64  #12739 failed on mips64
-JIT/Performance/CodeQuality/Span/SpanBench/SpanBench.sh mips64 # failed when checked crossgen
 JIT/Regression/CLR-x86-EJIT/V1-M12-Beta2/b26323/b26323/b26323.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/Regression/CLR-x86-JIT/V1.1-M1-Beta1/b140711/b140711/b140711.sh mips64 # failed when checked crossgen
 JIT/Regression/CLR-x86-JIT/V1-M09.5-PDC/b16423/b16423/b16423.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/Regression/CLR-x86-JIT/V1-M09.5-PDC/b29456/b29456/b29456.sh mips64 # failed when checked crossgen
 JIT/Regression/CLR-x86-JIT/V1-M11-Beta1/b41391/b41391/b41391.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b31746/b31746/b31746.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b37646/b37646/b37646.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b41852/b41852/b41852.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b78694/b78694/b78694.sh mips64 # failed when checked crossgen
-JIT/Regression/CLR-x86-JIT/V2.0-Beta2/b425314/b425314/b425314.sh mips64 # unstable on mips
 JIT/Regression/CLR-x86-JIT/V2.0-Beta2/b426654/b426654/b426654.sh mips64 # blocked on mips when skipcrossgen
-JIT/Regression/CLR-x86-JIT/v2.1/b610750/b610750_32vs64/b610750_32vs64.sh mips64 # failed when checked crossgen
 JIT/Regression/CLR-x86-JIT/v2.1/DDB/b175679/b175679/b175679.sh mips64  #12739 failed on mips64
 JIT/Regression/JitBlue/DevDiv_362706/DevDiv_362706/DevDiv_362706.sh mips64 # failed when checked skipcrossgen
 JIT/Regression/JitBlue/DevDiv_370233/DevDiv_370233/DevDiv_370233.sh mips64 # failed when checked skipcrossgen
 JIT/Regression/JitBlue/GitHub_11408/GitHub_11408/GitHub_11408.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/Regression/VS-ia64-JIT/V1.2-M01/b10827/b10827/b10827.sh mips64  #12739 failed on mips64
 JIT/superpmi/superpmicollect/10w5d_cs_do.sh mips64 # failed when crossgen and skipcrossgen
 JIT/superpmi/superpmicollect/superpmicollect.sh x64 mips64 #12863 failed item on x64 and mips64
 Loader/AssemblyDependencyResolver/AssemblyDependencyResolverTests/AssemblyDependencyResolverTests/AssemblyDependencyResolverTests.sh mips64 # failed when checked crossgen
 Loader/AssemblyDependencyResolver/MissingHostPolicyTests/MissingHostPolicyTests/MissingHostPolicyTests.sh x64 mips64 #12863 failed item on x64 and mips64
 readytorun/DynamicMethodGCStress/DynamicMethodGCStress/DynamicMethodGCStress.sh mips64 # failed when crossgen
+readytorun/tests/versionbubbles/versionbubbles/versionbubbles.sh # failed when crossgen
+tracing/eventcounter/incrementingpollingcounter/incrementingpollingcounter.sh mips64 # checked and debug
 tracing/eventcounter/pollingcounter/pollingcounter.sh mips64  #12739 failed on mips64
 tracing/tracecontrol/tracecontrol/tracecontrol.sh x64 mips64 #12863 failed item on x64 and mips64

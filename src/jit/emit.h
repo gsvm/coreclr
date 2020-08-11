@@ -358,7 +358,11 @@ struct insGroup
             ptr -= sizeof(VARSET_TP);
         }
 
+#if defined(_TARGET_MIPS64_)
+        ptr -= sizeof(VARSET_TP);
+#else
         ptr -= sizeof(unsigned);
+#endif
 
         return *(unsigned*)ptr;
     }

@@ -185,14 +185,7 @@ inline void SetRA(T_CONTEXT * context, TADDR ip) {
     context->Ra = ip;
 }
 
-inline  LPVOID __stdcall GetCurrentSP()
-{
-    LPVOID p;
-    __asm__ volatile (
-            "move %0, $29 \n"    //$29=sp
-            :"=r"(p)::);
-    return p;
-}
+extern "C" LPVOID __stdcall GetCurrentSP();
 
 inline void SetSP(T_CONTEXT *context, TADDR sp) {
     LIMITED_METHOD_DAC_CONTRACT;

@@ -89,7 +89,7 @@ DumpDataTarget::GetMachineType(
     *machine = IMAGE_FILE_MACHINE_ARM64;
 #elif _X86_
     *machine = IMAGE_FILE_MACHINE_I386;
-#elif defined(__mips64__)
+#elif _MIPS64_
 ////FIXME for MIPS.
     *machine = IMAGE_FILE_MACHINE_MIPS64;
 #else

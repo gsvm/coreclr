@@ -13,6 +13,14 @@ LEAF_ENTRY GetCurrentIP, _TEXT
     ori  v0, ra, 0
 LEAF_END GetCurrentIP, _TEXT
 
+// LPVOID __stdcall GetCurrentSP(void)//
+LEAF_ENTRY GetCurrentSP, _TEXT
+    .set noreorder
+    jr ra
+    ori  v0, sp, 0
+LEAF_END GetCurrentSP, _TEXT
+
+
 //-----------------------------------------------------------------------------
 // The following Macros help in WRITE_BARRIER Implemetations
 // WRITE_BARRIER_ENTRY
@@ -1370,6 +1378,7 @@ NESTED_END ExternalMethodFixupStub, _TEXT
 NESTED_ENTRY DelayLoad_MethodCall_FakeProlog, _TEXT, NoHandler
 DelayLoad_MethodCall:
     .global DelayLoad_MethodCall
+    .set noreorder
     PROLOG_WITH_TRANSITION_BLOCK
 
     ori a1, t8, 0      // Indirection cell
@@ -1380,15 +1389,12 @@ DelayLoad_MethodCall:
     daddu  t0, AT, t9
     daddiu  AT, t0, %lo(%neg(%gp_rel(DelayLoad_MethodCall_FakeProlog)))
     ld  t9, %call16(ExternalMethodFixupWorker)(AT)
-    daddiu a0, sp, __PWTB_TransitionBlock        // pTransitionBlock
     jalr  t9
-
-    //FIXME for MIPS: Is it needed transfering t9 or t2 ???
-    move t9, v0
+    daddiu a0, sp, __PWTB_TransitionBlock        // pTransitionBlock
 
     EPILOG_WITH_TRANSITION_BLOCK_TAILCALL
-    //// Share patch label
-    b ExternalMethodFixupPatchLabel
+    EPILOG_BRANCH_REG   v0
+    ori t9, v0, 0
 
 NESTED_END DelayLoad_MethodCall_FakeProlog, _TEXT
 
@@ -1421,12 +1427,12 @@ DelayLoad_Helper\suffix:
 
     ld  v0, __PWTB_ArgumentRegisters(sp)
     EPILOG_WITH_TRANSITION_BLOCK_RETURN
+    nop
 
 LOCAL_LABEL(FakeProlog\suffix\()_0):
-    move t9, v0
     EPILOG_WITH_TRANSITION_BLOCK_TAILCALL
-    EPILOG_BRANCH_REG  t9
-    nop
+    EPILOG_BRANCH_REG  v0
+    move t9, v0
 
 NESTED_END DelayLoad_Helper\suffix\()_FakeProlog, _TEXT
 .endm

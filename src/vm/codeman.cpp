@@ -1141,7 +1141,7 @@ PTR_VOID GetUnwindDataBlob(TADDR moduleBase, PTR_RUNTIME_FUNCTION pRuntimeFuncti
     {
         size = 4;
         epilogScopes = (xdata[0] >> 22) & 0x1f;
-        unwindWords = (xdata[0] >> 27) & 0x0f;
+        unwindWords = (xdata[0] >> 27) & 0x1f;
     }
     else 
     {
