@@ -42,7 +42,11 @@
 #   define __NR_membarrier  389
 #  elif defined(__aarch64__)
 #   define __NR_membarrier  283
-#  elif
+#  elif defined(__mips64)
+#pragma message("Unimplemented yet on MIPS, Loongson's Kernel unsuported 318 !!!")
+////FIXME for MIPS: Loongson's kernel not support this syscall.
+#   define __NR_membarrier  5318
+#  else
 #   error Unknown architecture
 #  endif
 # endif
@@ -90,7 +94,7 @@ FOR_ALL_NUMA_FUNCTIONS
 
 #endif // HAVE_NUMA_H
 
-#if defined(_ARM_) || defined(_ARM64_)
+#if defined(_ARM_) || defined(_ARM64_) || defined(_MIPS64_)
 #define SYSCONF_GET_NUMPROCS _SC_NPROCESSORS_CONF
 #else
 #define SYSCONF_GET_NUMPROCS _SC_NPROCESSORS_ONLN

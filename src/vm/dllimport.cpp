@@ -3841,9 +3841,9 @@ static void CreateNDirectStubWorker(StubState*         pss,
         // On Windows-X86, the native signature might need a return buffer when the managed doesn't (specifically when the native signature is a member function).
         fMarshalReturnValueFirst = HasRetBuffArg(&msig) || (isInstanceMethod && isReturnTypeValueType);
 #endif // UNIX_X86_ABI
-#elif defined(_TARGET_AMD64_) || defined (_TARGET_ARM64_)
+#elif defined(_TARGET_AMD64_) || defined (_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         fMarshalReturnValueFirst = isInstanceMethod && isReturnTypeValueType;
-#endif // defined(_TARGET_X86_) || defined(_TARGET_ARM_)
+#endif // defined(_TARGET_X86_) || defined(_TARGET_ARM_) || defined(_TARGET_MIPS64_)
 #ifdef _WIN32
         fReverseWithReturnBufferArg = fMarshalReturnValueFirst && SF_IsReverseStub(dwStubFlags);
 #endif

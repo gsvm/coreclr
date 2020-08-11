@@ -66,6 +66,10 @@ const char* CodeGen::genInsName(instruction ins)
         #define INST9(id, nm, fp, ldst, fmt, e1, e2, e3, e4, e5, e6, e7, e8, e9 ) nm,
         #include "instrs.h"
 
+#elif defined(_TARGET_MIPS64_)
+        #define INSTS(id, nm, fp, ldst, fmt, e1) nm,
+        #include "instrs.h"
+
 #else
 #error "Unknown _TARGET_"
 #endif
@@ -238,6 +242,8 @@ void CodeGen::instNop(unsigned size)
 /*****************************************************************************
  *
  *  Generate a jump instruction.
+ *
+ *  NOTE: no branch-delay!!!  delay-slot will be generated with jump together.
  */
 
 void CodeGen::inst_JMP(emitJumpKind jmp, BasicBlock* tgtBlock)
@@ -258,6 +264,7 @@ void CodeGen::inst_JMP(emitJumpKind jmp, BasicBlock* tgtBlock)
 #endif
 #endif // !FEATURE_FIXED_OUT_ARGS
 
+    /* FIXME for MIPS: emitJumpKindToIns() has to be re-design. */
     getEmitter()->emitIns_J(emitter::emitJumpKindToIns(jmp), tgtBlock);
 }
 
@@ -444,6 +451,8 @@ void CodeGen::inst_RV_RV_RV(instruction ins,
 {
 #ifdef _TARGET_ARM_
     getEmitter()->emitIns_R_R_R(ins, size, reg1, reg2, reg3, flags);
+#elif defined(_TARGET_MIPS64_)
+    getEmitter()->emitIns_R_R_R(ins, size, reg1, reg2, reg3);
 #elif defined(_TARGET_XARCH_)
     getEmitter()->emitIns_R_R_R(ins, size, reg1, reg2, reg3);
 #else
@@ -519,6 +528,8 @@ void CodeGen::inst_RV_IV(
     assert(ins != INS_cmp);
     assert(ins != INS_tst);
     assert(ins != INS_mov);
+    getEmitter()->emitIns_R_R_I(ins, size, reg, reg, val);
+#elif defined(_TARGET_MIPS64_)
     getEmitter()->emitIns_R_R_I(ins, size, reg, reg, val);
 #else // !_TARGET_ARM_
 #ifdef _TARGET_AMD64_
@@ -1477,6 +1488,13 @@ bool CodeGenInterface::validImmForBL(ssize_t addr)
 }
 #endif // _TARGET_ARM64_
 
+#if defined(_TARGET_MIPS64_)
+bool CodeGenInterface::validImmForBAL(ssize_t addr)
+{
+    return false;
+}
+#endif // _TARGET_MIPS64_
+
 /*****************************************************************************
  *
  *  Get the machine dependent instruction for performing sign/zero extension.
@@ -1487,6 +1505,10 @@ bool CodeGenInterface::validImmForBL(ssize_t addr)
  */
 instruction CodeGen::ins_Move_Extend(var_types srcType, bool srcInReg)
 {
+#ifdef _TARGET_MIPS64_
+    assert(!"unimplemented yet on MIPS");
+#endif
+
     instruction ins = INS_invalid;
 
     if (varTypeIsSIMD(srcType))
@@ -1667,6 +1689,8 @@ instruction CodeGenInterface::ins_Load(var_types srcType, bool aligned /*=false*
         }
 #elif defined(_TARGET_ARM64_)
         return INS_ldr;
+#elif defined(_TARGET_MIPS64_)
+        assert(!"unimplemented on MIPS yet");
 #else
         assert(!"ins_Load with SIMD type");
 #endif
@@ -1691,6 +1715,19 @@ instruction CodeGenInterface::ins_Load(var_types srcType, bool aligned /*=false*
         return INS_ldr;
 #elif defined(_TARGET_ARM_)
         return INS_vldr;
+#elif defined(_TARGET_MIPS64_)
+        if (srcType == TYP_DOUBLE)
+        {
+            return INS_ldc1;
+        }
+        else if (srcType == TYP_FLOAT)
+        {
+            return INS_lwc1;
+        }
+        else
+        {/* FIXME for MIPS: should confirm other. */
+            assert(!"unhandled floating type");
+        }
 #else
         assert(!varTypeIsFloating(srcType));
 #endif
@@ -1728,6 +1765,33 @@ instruction CodeGenInterface::ins_Load(var_types srcType, bool aligned /*=false*
             ins = INS_ldrh;
         else
             ins = INS_ldrsh;
+    }
+#elif defined(_TARGET_MIPS64_)
+    if (varTypeIsByte(srcType))
+    {
+        if (varTypeIsUnsigned(srcType))
+            ins = INS_lbu;
+        else
+            ins = INS_lb;
+    }
+    else if (varTypeIsShort(srcType))
+    {
+        if (varTypeIsUnsigned(srcType))
+            ins = INS_lhu;
+        else
+            ins = INS_lh;
+    }
+    else if (TYP_INT == srcType)
+    {
+        ins = INS_lw;
+    }
+    else if (TYP_UINT == srcType)
+    {
+        ins = INS_lwu;
+    }
+    else //if ((TYP_LONG == srcType) || (TYP_ULONG == srcType))
+    {
+        ins = INS_ld;//default ld.
     }
 #else
     NYI("ins_Load");
@@ -1783,6 +1847,16 @@ instruction CodeGen::ins_Copy(var_types dstType)
     assert(!varTypeIsSIMD(dstType));
     assert(!varTypeIsFloating(dstType));
     return INS_mov;
+#elif defined(_TARGET_MIPS64_)
+    /* FIXME for MIPS */
+    if (varTypeIsFloating(dstType))
+    {
+        return dstType == TYP_FLOAT ? INS_mov_s : INS_mov_d;
+    }
+    else
+    {
+        return INS_mov;
+    }
 #else // _TARGET_*
 #error "Unknown _TARGET_"
 #endif
@@ -1849,6 +1923,22 @@ instruction CodeGenInterface::ins_Store(var_types dstType, bool aligned /*=false
     {
         return INS_vstr;
     }
+#elif defined(_TARGET_MIPS64_)
+    if (varTypeIsFloating(dstType))
+    {
+        if (dstType == TYP_DOUBLE)
+        {
+            return INS_sdc1;
+        }
+        else if (dstType == TYP_FLOAT)
+        {
+            return INS_swc1;
+        }
+        else
+        {/* FIXME for MIPS: should confirm other. */
+            assert(!"unhandled floating type");
+        }
+    }
 #else
     assert(!varTypeIsSIMD(dstType));
     assert(!varTypeIsFloating(dstType));
@@ -1863,6 +1953,15 @@ instruction CodeGenInterface::ins_Store(var_types dstType, bool aligned /*=false
         ins = INS_strb;
     else if (varTypeIsShort(dstType))
         ins = INS_strh;
+#elif defined(_TARGET_MIPS64_)
+    if (varTypeIsByte(dstType))
+        ins = INS_sb;
+    else if (varTypeIsShort(dstType))
+        ins = INS_sh;
+    else if ((TYP_INT == dstType) || (TYP_UINT == dstType))
+        ins = INS_sw;
+    else //if ((TYP_LONG == dstType) || (TYP_ULONG == dstType) || (TYP_REF == dstType))
+        ins = INS_sd;//default sd.
 #else
     NYI("ins_Store");
 #endif
@@ -2224,7 +2323,7 @@ void CodeGen::instGen_Return(unsigned stkArgSize)
  *     Note: all MemoryBarriers instructions can be removed by
  *           SET COMPlus_JitNoMemoryBarriers=1
  */
-#ifdef _TARGET_ARM64_
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 void CodeGen::instGen_MemoryBarrier(insBarrier barrierType)
 #else
 void CodeGen::instGen_MemoryBarrier()
@@ -2244,6 +2343,8 @@ void CodeGen::instGen_MemoryBarrier()
     getEmitter()->emitIns_I(INS_dmb, EA_4BYTE, 0xf);
 #elif defined(_TARGET_ARM64_)
     getEmitter()->emitIns_BARR(INS_dmb, barrierType);
+#elif defined(_TARGET_MIPS64_)
+    instGen(INS_sync);
 #else
 #error "Unknown _TARGET_"
 #endif
@@ -2259,6 +2360,8 @@ void CodeGen::instGen_Set_Reg_To_Zero(emitAttr size, regNumber reg, insFlags fla
     getEmitter()->emitIns_R_R(INS_xor, size, reg, reg);
 #elif defined(_TARGET_ARMARCH_)
     getEmitter()->emitIns_R_I(INS_mov, size, reg, 0 ARM_ARG(flags));
+#elif defined(_TARGET_MIPS64_)
+    getEmitter()->emitIns_R_R_I(INS_daddiu, size, reg, REG_R0, 0);
 #else
 #error "Unknown _TARGET_"
 #endif
@@ -2276,6 +2379,9 @@ void CodeGen::instGen_Compare_Reg_To_Zero(emitAttr size, regNumber reg)
     getEmitter()->emitIns_R_R(INS_test, size, reg, reg);
 #elif defined(_TARGET_ARMARCH_)
     getEmitter()->emitIns_R_I(INS_cmp, size, reg, 0);
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+#pragma  message("Unimplemented yet MIPS64")
 #else
 #error "Unknown _TARGET_"
 #endif
@@ -2290,6 +2396,9 @@ void CodeGen::instGen_Compare_Reg_To_Reg(emitAttr size, regNumber reg1, regNumbe
 {
 #if defined(_TARGET_XARCH_) || defined(_TARGET_ARMARCH_)
     getEmitter()->emitIns_R_R(INS_cmp, size, reg1, reg2);
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+#pragma  message("Unimplemented yet MIPS64")
 #else
 #error "Unknown _TARGET_"
 #endif
@@ -2337,6 +2446,9 @@ void CodeGen::instGen_Compare_Reg_To_Imm(emitAttr size, regNumber reg, target_ss
         {
             assert(!"Invalid immediate for instGen_Compare_Reg_To_Imm");
         }
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+#pragma  message("Unimplemented yet MIPS64")
 #else
 #error "Unknown _TARGET_"
 #endif

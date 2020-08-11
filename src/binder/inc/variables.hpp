@@ -44,6 +44,7 @@ namespace BINDER_SPACE
         SString architectureAMD64;
         SString architectureARM;
         SString architectureARM64;
+        SString architectureMIPS64;
         SString cultureNeutral;
         SString emptyString;
         SString mscorlib;

@@ -741,6 +741,10 @@ bool getSystemVAmd64PassStructInRegisterDescriptor(
     /* IN */ CORINFO_CLASS_HANDLE                                  structHnd,
     /* OUT */ SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr);
 
+void getMIPS64PassStructInRegisterDescriptor(
+    /* IN */ CORINFO_CLASS_HANDLE                           structHnd,
+    /* OUT */ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr);
+
 /*****************************************************************************
  * ICorDynamicInfo contains EE interface methods which return values that may
  * change from invocation to invocation.  They cannot be embedded in persisted

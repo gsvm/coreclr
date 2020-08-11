@@ -1,0 +1,41 @@
+#
+# Copyright (c) Loongson Technology. All rights reserved.
+#
+baseservices/threading/interlocked/compareexchange/CompareExchangeTClass_1/CompareExchangeTClass_1.sh mips64  #12739 failed on mips64
+baseservices/threading/interlocked/compareexchange/CompareExchangeTString/CompareExchangeTString.sh mips64  #12739 failed on mips64
+GC/Coverage/271010/271010.sh x64 mips64 #12863 failed item on x64 and mips64
+GC/Features/LOHFragmentation/lohfragmentation/lohfragmentation.sh x64 mips64 #12863 failed item on x64 and mips64
+GC/LargeMemory/Allocation/finalizertest/finalizertest.sh x64 mips64 #12863 failed item on x64 and mips64
+GC/LargeMemory/API/gc/collect/collect.sh x64 mips64 #12863 failed item on x64 and mips64
+GC/LargeMemory/API/gc/getgeneration/getgeneration.sh x64 mips64 #12863 failed item on x64 and mips64
+GC/Regressions/dev10bugs/536168/536168/536168.sh x64 mips64 #12863 failed item on x64 and mips64
+Interop/ExecInDefAppDom/ExecInDefAppDom/ExecInDefAppDom.sh x64 mips64 #12863 failed item on x64 and mips64
+Interop/NativeCallable/NativeCallableTest/NativeCallableTest.sh mips64  #12725 blocked on mips64
+JIT/Directed/arglist/vararg/vararg.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Directed/Misc/function_pointer/MutualThdRecur-fptr/MutualThdRecur-fptr.sh mips64  #12725 blocked on mips64
+JIT/Directed/PREFIX/unaligned/1/arglist/arglist.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Directed/PREFIX/unaligned/2/arglist/arglist.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Directed/PREFIX/unaligned/4/arglist/arglist.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Directed/PREFIX/volatile/1/arglist/arglist.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/IL_Conformance/Old/Conformance_Base/conv_ovf_i8_i/conv_ovf_i8_i.sh mips64  #12739 failed on mips64
+JIT/jit64/mcc/interop/mcc_i00/mcc_i00.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/jit64/opt/rngchk/ArrayWithThread_o/ArrayWithThread_o.sh mips64  #12739 failed on mips64
+JIT/Methodical/Coverage/arglist_pos/arglist_pos.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Methodical/flowgraph/dev10_bug679955/volatileLocal1/volatileLocal1.sh mips64  #12739 failed on mips64
+JIT/Methodical/refany/_il_dbgseq/_il_dbgseq.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Methodical/refany/_il_relseq/_il_relseq.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Performance/CodeQuality/BenchmarksGame/regex-redux/regex-redux-5/regex-redux-5.sh mips64  #12739 failed on mips64
+JIT/Performance/CodeQuality/Roslyn/CscBench/CscBench.sh mips64  #12739 failed on mips64
+JIT/Regression/CLR-x86-EJIT/V1-M12-Beta2/b26323/b26323/b26323.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Regression/CLR-x86-JIT/V1-M09.5-PDC/b16423/b16423/b16423.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Regression/CLR-x86-JIT/V1-M11-Beta1/b41391/b41391/b41391.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b31746/b31746/b31746.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b37646/b37646/b37646.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b41852/b41852/b41852.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Regression/CLR-x86-JIT/v2.1/DDB/b175679/b175679/b175679.sh mips64  #12739 failed on mips64
+JIT/Regression/JitBlue/GitHub_11408/GitHub_11408/GitHub_11408.sh x64 mips64 #12863 failed item on x64 and mips64
+JIT/Regression/VS-ia64-JIT/V1.2-M01/b10827/b10827/b10827.sh mips64  #12739 failed on mips64
+JIT/superpmi/superpmicollect/superpmicollect.sh x64 mips64 #12863 failed item on x64 and mips64
+Loader/AssemblyDependencyResolver/MissingHostPolicyTests/MissingHostPolicyTests/MissingHostPolicyTests.sh x64 mips64 #12863 failed item on x64 and mips64
+tracing/eventcounter/pollingcounter/pollingcounter.sh mips64  #12739 failed on mips64
+tracing/tracecontrol/tracecontrol/tracecontrol.sh x64 mips64 #12863 failed item on x64 and mips64

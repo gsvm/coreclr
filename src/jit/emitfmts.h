@@ -9,6 +9,8 @@
 #include "emitfmtsarm.h"
 #elif defined(_TARGET_ARM64_)
 #include "emitfmtsarm64.h"
+#elif defined(_TARGET_MIPS64_)
+#include "emitfmtsmips64.h"
 #else
 #error Unsupported or unset target architecture
 #endif // target type

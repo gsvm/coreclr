@@ -26,7 +26,7 @@ export PYTHON
 usage()
 {
     echo "Usage: $0 [BuildArch] [BuildType] [-verbose] [-coverage] [-cross] [-gccx.y] [-clangx.y] [-ninja] [-configureonly] [-skipconfigure] [-skipnative] [-skipcrossarchnative] [-skipmanaged] [-skipmscorlib] [-skiptests] [-stripsymbols] [-ignorewarnings] [-cmakeargs] [-bindir]"
-    echo "BuildArch can be: -x64, -x86, -arm, -armel, -arm64"
+    echo "BuildArch can be: -x64, -x86, -arm, -armel, -arm64, -mips64"
     echo "BuildType can be: -debug, -checked, -release"
     echo "-coverage - optional argument to enable code coverage build (currently supported only for Linux and OSX)."
     echo "-ninja - target ninja instead of GNU make"
@@ -315,6 +315,8 @@ build_cross_architecture_components()
         __SkipCrossArchBuild=0
     elif [[ "$__BuildArch" == "arm64" && "$__CrossArch" == "x64" ]]; then
         __SkipCrossArchBuild=0
+    elif [[ "$__BuildArch" == "mips64" && "$__CrossArch" == "x64" && $__SkipCrossgen == 0 ]]; then
+        __SkipCrossArchBuild=0
     else
         # not supported
         return
@@ -479,6 +481,8 @@ build_CoreLib()
            build_CoreLib_ni "$__CrossComponentBinDir/crossgen" $__CoreLibILDir
        elif [[ ( "$__HostArch" == "x64" ) && ( "$__BuildArch" == "arm64" ) ]]; then
            build_CoreLib_ni "$__CrossComponentBinDir/crossgen" $__CoreLibILDir
+       elif [[ ( "$__HostArch" == "x64" ) && ( "$__BuildArch" == "mips64" ) ]]; then
+           build_CoreLib_ni "$__CrossComponentBinDir/crossgen" $__CoreLibILDir
        else
            # Crossgen not performed, so treat the IL version as the final version
            cp $__CoreLibILDir/System.Private.CoreLib.dll $__BinDir/System.Private.CoreLib.dll
@@ -562,6 +566,11 @@ case $CPUName in
     amd64)
         __BuildArch=x64
         __HostArch=x64
+        ;;
+
+    mips64)
+        __BuildArch=mips64
+        __HostArch=mips64
         ;;
     *)
         echo "Unknown CPU $CPUName detected, configuring as if for x64"
@@ -705,6 +714,10 @@ while :; do
             __BuildArch=arm64
             ;;
 
+        mips64|-mips64)
+            __BuildArch=mips64
+            ;;
+
         debug|-debug)
             __BuildType=Debug
             ;;
@@ -780,6 +793,11 @@ while :; do
         clang7|-clang7)
             __ClangMajorVersion=7
             __ClangMinorVersion=
+            ;;
+
+        clang8.0|-clang8.0)
+            __ClangMajorVersion=8
+            __ClangMinorVersion=0
             ;;
 
         gcc5|-gcc5)

@@ -429,6 +429,18 @@ CONFIG_STRING(JitFunctionFile, W("JitFunctionFile"))
 //    of the frame)
 CONFIG_INTEGER(JitSaveFpLrWithCalleeSavedRegisters, W("JitSaveFpLrWithCalleeSavedRegisters"), 0)
 #endif // defined(_TARGET_ARM64_)
+
+#if defined(_TARGET_MIPS64_)
+// JitSaveFpRaWithCalleeSavedRegisters:
+//    0: use default frame type decision
+//    1: disable frames that save FP/RA registers with the callee-saved registers (at the top of the frame)
+//    2: force all frames to use the frame types that save FP/RA registers with the callee-saved registers (at the top
+//    of the frame)
+CONFIG_INTEGER(JitSaveFpRaWithCalleeSavedRegisters, W("JitSaveFpRaWithCalleeSavedRegisters"), 0)
+
+// Disable emitDispIns by default
+CONFIG_INTEGER(JitDispIns, W("JitDispIns"), 0)
+#endif // defined(_TARGET_MIPS64_)
 #endif // DEBUG
 
 #undef CONFIG_INTEGER

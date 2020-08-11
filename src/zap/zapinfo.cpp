@@ -2679,6 +2679,11 @@ void ZapInfo::recordRelocation(void *location, void *target,
         break;
 #endif
 
+#if defined(_TARGET_MIPS64_)
+    case IMAGE_REL_MIPS64_PC:
+        break;
+#endif
+
     default:
         _ASSERTE(!"Unknown reloc type");
         break;
@@ -2798,6 +2803,12 @@ void ZapInfo::recordRelocation(void *location, void *target,
         if (!FitsInRel12(targetOffset))
             ThrowHR(COR_E_OVERFLOW);
         PutArm64Rel12((UINT32 *)location, targetOffset);
+        break;
+#endif
+
+#if defined(_TARGET_MIPS64_)
+    case IMAGE_REL_MIPS64_PC:
+        *(UINT32*)location = targetOffset;
         break;
 #endif
 
@@ -3559,6 +3570,13 @@ bool ZapInfo::getSystemVAmd64PassStructInRegisterDescriptor(
     /*OUT*/ SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr)
 {
     return m_pEEJitInfo->getSystemVAmd64PassStructInRegisterDescriptor(_structHnd, structPassInRegDescPtr);
+}
+
+void ZapInfo::getMIPS64PassStructInRegisterDescriptor(
+    /*IN*/  CORINFO_CLASS_HANDLE _structHnd,
+    /*OUT*/ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr)
+{
+    return m_pEEJitInfo->getMIPS64PassStructInRegisterDescriptor(_structHnd, structPassInRegDescPtr);
 }
 
 unsigned ZapInfo::getClassNumInstanceFields(CORINFO_CLASS_HANDLE cls)

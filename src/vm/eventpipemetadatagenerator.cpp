@@ -60,7 +60,11 @@ BYTE* EventPipeMetadataGenerator::GenerateEventMetadata(
     pCurrent += sizeof(WCHAR);
 
     // Write the keywords.
+#ifdef _TARGET_MIPS64_
+    memcpy(pCurrent, &keywords, sizeof(INT64));
+#else
     *((INT64 *)pCurrent) = keywords;
+#endif
     pCurrent += sizeof(INT64);
 
     // Write the version.

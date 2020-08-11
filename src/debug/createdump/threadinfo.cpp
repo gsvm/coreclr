@@ -65,6 +65,10 @@ ThreadInfo::Initialize(ICLRDataTarget* pDataTarget)
     TRACE("Thread %04x PC %08lx SP %08lx\n", m_tid, (unsigned long)m_gpRegisters.ARM_pc, (unsigned long)m_gpRegisters.ARM_sp);
 #elif defined(__x86_64__)
     TRACE("Thread %04x RIP %016llx RSP %016llx\n", m_tid, (unsigned long long)m_gpRegisters.rip, (unsigned long long)m_gpRegisters.rsp);
+#elif defined(__mips64__)
+////FIXME for MIPS.
+#pragma message("Unimplemented yet on MIPS")
+    TRACE("Thread %04x PC %016llx SP %016llx\n", m_tid, (unsigned long long)m_gpRegisters.pc, (unsigned long long)m_gpRegisters.sp);
 #else
 #error "Unsupported architecture"
 #endif
@@ -344,6 +348,9 @@ ThreadInfo::GetRegistersWithDataTarget(ICLRDataTarget* pDataTarget)
     assert(sizeof(context.D) == sizeof(m_vfpRegisters.fpregs));
     memcpy(m_vfpRegisters.fpregs, context.D, sizeof(context.D));
 #endif
+#elif defined(__mips64__)
+////FIXME for MIPS.
+#pragma message("Unimplemented yet on MIPS")
 #else 
 #error Platform not supported
 #endif
@@ -360,6 +367,10 @@ ThreadInfo::GetThreadStack(CrashInfo& crashInfo)
     startAddress = MCREG_Sp(m_gpRegisters) & PAGE_MASK;
 #elif defined(__arm__)
     startAddress = m_gpRegisters.ARM_sp & PAGE_MASK;
+#elif defined(__mips64__)
+////FIXME for MIPS.
+#pragma message("Unimplemented yet on MIPS")
+    startAddress = m_gpRegisters.sp & PAGE_MASK;
 #else
     startAddress = m_gpRegisters.rsp & PAGE_MASK;
 #endif
@@ -495,6 +506,9 @@ ThreadInfo::GetThreadContext(uint32_t flags, CONTEXT* context) const
         memcpy(context->D, m_vfpRegisters.fpregs, sizeof(context->D));
 #endif
     }
+#elif defined(__mips64__)
+////FIXME for MIPS.
+#pragma message("Unimplemented yet on MIPS")
 #else
 #error Platform not supported
 #endif

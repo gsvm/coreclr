@@ -325,7 +325,15 @@ struct insGroup
     unsigned igStkLvl; // stack level on entry
 #endif
 
+//#ifdef _TARGET_MIPS64_
+    // On future maybe use this.
+    //unsigned int igJmpCnt; // # Total count of instrDescJmp.
+//#endif
+#ifdef _TARGET_MIPS64_
+    unsigned int igInsCnt; // # of instructions  in this group
+#else
     unsigned char igInsCnt; // # of instructions  in this group
+#endif
 
 #endif // REGMASK_BITS
 
@@ -530,6 +538,7 @@ protected:
 
     struct emitAddrMode
     {
+    /* FIXME for MIPS: */
         regNumber       amBaseReg : REGNUM_BITS + 1;
         regNumber       amIndxReg : REGNUM_BITS + 1;
         emitter::opSize amScale : 2;
@@ -585,6 +594,10 @@ protected:
 #elif defined(_TARGET_ARM64_)
         static_assert_no_msg(INS_count <= 512);
         instruction _idIns : 9;
+#elif defined(_TARGET_MIPS64_)
+        /* FIXME for MIPS: not include MSA. */
+        static_assert_no_msg(INS_count <= 512);
+        instruction _idIns : 9;
 #else  // !(defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_))
         static_assert_no_msg(INS_count <= 256);
         instruction _idIns : 8;
@@ -594,6 +607,10 @@ protected:
 #if defined(_TARGET_XARCH_)
         static_assert_no_msg(IF_COUNT <= 128);
         insFormat _idInsFmt : 7;
+#elif defined(_TARGET_MIPS64_)
+        /* FIXME for MIPS: maybe delete fmt for unusing it. */
+        //static_assert_no_msg(IF_COUNT <= 32);
+        //insFormat _idInsFmt : 5;
 #else
         static_assert_no_msg(IF_COUNT <= 256);
         insFormat _idInsFmt : 8;
@@ -610,6 +627,15 @@ protected:
             _idIns = ins;
         }
 
+#if defined(_TARGET_MIPS64_)
+        insFormat idInsFmt() const
+        {//not used for mips.
+            return (insFormat)0;
+        }
+        void idInsFmt(insFormat insFmt)
+        {
+        }
+#else
         insFormat idInsFmt() const
         {
             return _idInsFmt;
@@ -622,6 +648,7 @@ protected:
             assert(insFmt < IF_COUNT);
             _idInsFmt = insFmt;
         }
+#endif
 
         void idSetRelocFlags(emitAttr attr)
         {
@@ -635,6 +662,7 @@ protected:
         // amd64: 17 bits
         // arm:   16 bits
         // arm64: 17 bits
+        //mips64: 14 bits
 
     private:
 #if defined(_TARGET_XARCH_)
@@ -644,6 +672,8 @@ protected:
                                   // doesn't cross a byte boundary.
 #elif defined(_TARGET_ARM64_)
 // Moved the definition of '_idOpSize' later so that we don't cross a 32-bit boundary when laying out bitfields
+#elif defined(_TARGET_MIPS64_)
+        /* _idOpSize defined bellow. */
 #else  // ARM
         opSize      _idOpSize : 2; // operand size: 0=1 , 1=2 , 2=4 , 3=8
 #endif // ARM
@@ -676,6 +706,7 @@ protected:
         // amd64: 38 bits
         // arm:   32 bits
         // arm64: 31 bits
+        //mips64: 28 bits
         CLANG_FORMAT_COMMENT_ANCHOR;
 
         unsigned _idSmallDsc : 1;  // is this a "small" descriptor?
@@ -691,6 +722,13 @@ protected:
 #ifdef _TARGET_ARM64_
         opSize   _idOpSize : 3; // operand size: 0=1 , 1=2 , 2=4 , 3=8, 4=16
         insOpts  _idInsOpt : 6; // options for instructions
+        unsigned _idLclVar : 1; // access a local on stack
+#endif
+
+#ifdef _TARGET_MIPS64_
+        /* FIXME for MIPS: maybe delete on future. */
+        opSize   _idOpSize : 3; // operand size: 0=1 , 1=2 , 2=4 , 3=8, 4=16
+        insOpts  _idInsOpt : 6; // mips options for special: placeholders. e.g emitIns_R_C.
         unsigned _idLclVar : 1; // access a local on stack
 #endif
 
@@ -710,6 +748,9 @@ protected:
 #elif defined(_TARGET_XARCH_)
                                    // For xarch, we have used 14 bits from the second DWORD.
 #define ID_EXTRA_BITFIELD_BITS (14)
+#elif defined(_TARGET_MIPS64_)
+// For Mips64, we have used 14 bits from the second DWORD.
+#define ID_EXTRA_BITFIELD_BITS (14)
 #else
 #error Unsupported or unset target architecture
 #endif
@@ -720,6 +761,7 @@ protected:
         // amd64: 46 bits
         // arm:   48 bits
         // arm64: 49 bits
+        //mips64: 46 bits
 
         unsigned _idCnsReloc : 1; // LargeCns is an RVA and needs reloc tag
         unsigned _idDspReloc : 1; // LargeDsp is an RVA and needs reloc tag
@@ -728,10 +770,11 @@ protected:
 
         ////////////////////////////////////////////////////////////////////////
         // Space taken up to here:
-        // x86:   48 bits
-        // amd64: 48 bits
-        // arm:   50 bits
-        // arm64: 51 bits
+        // x86:    48 bits
+        // amd64:  48 bits
+        // arm:    50 bits
+        // arm64:  51 bits
+        // mips64: 48 bits
         CLANG_FORMAT_COMMENT_ANCHOR;
 
 #define ID_EXTRA_BITS (ID_EXTRA_RELOC_BITS + ID_EXTRA_BITFIELD_BITS)
@@ -744,10 +787,11 @@ protected:
 
         ////////////////////////////////////////////////////////////////////////
         // Small constant size:
-        // x86:   16 bits
-        // amd64: 16 bits
-        // arm:   14 bits
-        // arm64: 13 bits
+        // x86:    16 bits
+        // amd64:  16 bits
+        // arm:    14 bits
+        // arm64:  13 bits
+        // mips64: 16 bits
 
         unsigned _idSmallCns : ID_BIT_SMALL_CNS;
 
@@ -779,12 +823,13 @@ protected:
 // This is the end of the 'small' instrDesc which is the same on all
 //   platforms (except 64-bit DEBUG which is a little bigger).
 // Non-DEBUG sizes:
-//   x86/amd64/arm/arm64: 64 bits
+//   x86/amd64/arm/arm64/mips64: 64 bits
 // DEBUG sizes (includes one pointer):
 //   x86:   2 DWORDs, 96 bits
 //   amd64: 4 DWORDs, 128 bits
 //   arm:   3 DWORDs, 96 bits
 //   arm64: 4 DWORDs, 128 bits
+//  mips64: 4 DWORDs, 128 bits   But maybe modify on future.
 // There should no padding or alignment issues on any platform or
 //   configuration (including DEBUG which has 1 extra pointer).
 //
@@ -809,7 +854,8 @@ protected:
 // TODO-Cleanup: We should really add a DEBUG-only tag to this union so we can add asserts
 // about reading what we think is here, to avoid unexpected corruption issues.
 
-#ifndef _TARGET_ARM64_
+#if !defined(_TARGET_ARM64_) && !defined(_TARGET_MIPS64_)
+/* FIXME for MIPS: maybe needed this for mips. */
             emitLclVarAddr iiaLclVar;
 #endif
             BasicBlock*  iiaBBlabel;
@@ -861,7 +907,27 @@ protected:
                 regNumber _idReg3 : REGNUM_BITS;
                 regNumber _idReg4 : REGNUM_BITS;
             };
-#endif // defined(_TARGET_XARCH_)
+#elif defined(_TARGET_MIPS64_) // _TARGET_XARCH_
+
+            struct
+            {
+                // For 64-bit architecture this 32-bit structure can pack with these unsigned bit fields
+                emitLclVarAddr iiaLclVar;
+                GCtype         _idGCref2 : 2;
+                regNumber _idReg3 : REGNUM_BITS;
+                regNumber _idReg4 : REGNUM_BITS;
+            };
+
+            unsigned int iiaEncodedInstr;//instruction's binary encoding or jmp's temporary offset.
+            void iiaSetInstrEncode(unsigned int encode)
+            {
+                iiaEncodedInstr = encode;
+            }
+            unsigned int iiaGetInstrEncode() const
+            {
+                return iiaEncodedInstr;
+            }
+#endif // defined(_TARGET_MIPS64_)
 
         } _idAddrUnion;
 
@@ -959,7 +1025,27 @@ protected:
             _idInsFlags = sf;
             assert(sf == _idInsFlags);
         }
-#endif // _TARGET_ARM_
+#elif defined(_TARGET_MIPS64_)
+        unsigned idCodeSize() const
+        {
+            switch (idInsOpt())
+            {
+                case INS_OPTS_RELOC:
+                case INS_OPTS_RC:
+                    return 4 << 2;
+                case INS_OPTS_RL:
+                    return 4 << 2;
+                case INS_OPTS_JR:
+                    return 6 << 2;
+                case INS_OPTS_J:
+                    return 6 << 2;
+                case INS_OPTS_C:
+                    return idIsCallRegPtr() ? (2 << 2) : (8 << 2);
+                default:
+                    return 4;
+            }
+        }
+#endif // _TARGET_MIPS64_
 
         emitAttr idOpSize()
         {
@@ -1001,6 +1087,20 @@ protected:
             idAddr()->_idGCref2 = gctype;
         }
 #endif // _TARGET_ARM64_
+
+#ifdef _TARGET_MIPS64_
+        /* FIXME for MIPS: is needed for mips64? */
+        GCtype idGCrefReg2() const
+        {
+            assert(!idIsSmallDsc());
+            return (GCtype)idAddr()->_idGCref2;
+        }
+        void idGCrefReg2(GCtype gctype)
+        {
+            assert(!idIsSmallDsc());
+            idAddr()->_idGCref2 = gctype;
+        }
+#endif // _TARGET_MIPS64_
 
         regNumber idReg2() const
         {
@@ -1083,6 +1183,41 @@ protected:
 #endif // _TARGET_ARM64_
 
 #endif // _TARGET_ARMARCH_
+#ifdef _TARGET_MIPS64_
+        insOpts idInsOpt() const
+        {
+            return (insOpts)_idInsOpt;
+        }
+        void idInsOpt(insOpts opt)
+        {
+            _idInsOpt = opt;
+            assert(opt == _idInsOpt);
+        }
+
+        regNumber idReg3() const
+        {
+            assert(!idIsSmallDsc());
+            return idAddr()->_idReg3;
+        }
+        void idReg3(regNumber reg)
+        {
+            assert(!idIsSmallDsc());
+            idAddr()->_idReg3 = reg;
+            assert(reg == idAddr()->_idReg3);
+        }
+        regNumber idReg4() const
+        {
+            assert(!idIsSmallDsc());
+            return idAddr()->_idReg4;
+        }
+        void idReg4(regNumber reg)
+        {
+            assert(!idIsSmallDsc());
+            idAddr()->_idReg4 = reg;
+            assert(reg == idAddr()->_idReg4);
+        }
+
+#endif // _TARGET_MIPS64_
 
         inline static bool fitsInSmallCns(ssize_t val)
         {
@@ -1181,6 +1316,17 @@ protected:
         }
 #endif // defined(_TARGET_ARM_)
 
+#ifdef _TARGET_MIPS64_
+        bool idIsLclVar() const
+        {
+            return _idLclVar != 0;
+        }
+        void idSetIsLclVar()
+        {
+            _idLclVar = 1;
+        }
+#endif // _TARGET_MIPS64_
+
         bool idIsCnsReloc() const
         {
             return _idCnsReloc != 0;
@@ -1215,15 +1361,14 @@ protected:
 
         inline const idAddrUnion* idAddr() const
         {
-            assert(!idIsSmallDsc());
             return &this->_idAddrUnion;
         }
 
         inline idAddrUnion* idAddr()
         {
-            assert(!idIsSmallDsc());
             return &this->_idAddrUnion;
         }
+
     }; // End of  struct instrDesc
 
     void dispIns(instrDesc* id);
@@ -1232,6 +1377,7 @@ protected:
 
     /********************************************************************************************/
 
+    /* FIXME for MIPS: The best is not using instrDesc on mips and minimizing instrDescJmp. */
     struct instrDescJmp : instrDesc
     {
         instrDescJmp* idjNext; // next jump in the group/method
@@ -1318,6 +1464,8 @@ protected:
         GCtype _idcSecondRetRegGCType : 2; // ... GC type for the second return register.
 #endif                                     // MULTIREG_HAS_SECOND_GC_RET
     };
+
+    /* FIXME for MIPS: maybe implement for mips64. */
 
 #ifdef _TARGET_ARM_
 
@@ -1576,6 +1724,10 @@ private:
     unsigned char emitOutputSizeT(BYTE* dst, unsigned __int64 val);
 #endif // defined(_TARGET_X86_)
 
+#ifdef _TARGET_MIPS64_
+    unsigned int emitInsOps(instruction ins, regNumber *reg, ssize_t *imm);
+#endif // defined(_TARGET_MIPS64_)
+
     size_t emitIssue1Instr(insGroup* ig, instrDesc* id, BYTE** dp);
     size_t emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp);
 
@@ -1626,6 +1778,7 @@ private:
 #define SC_IG_BUFFER_SIZE (100 * sizeof(emitter::instrDesc) + 14 * SMALL_IDSC_SIZE)
 #else // !_TARGET_ARMARCH_
 #define SC_IG_BUFFER_SIZE (50 * sizeof(emitter::instrDesc) + 14 * SMALL_IDSC_SIZE)
+/* FIXME for MIPS: should confirm. */
 #endif // !_TARGET_ARMARCH_
 
     size_t emitIGbuffSize;
@@ -1759,7 +1912,7 @@ private:
     // the start of a basic block that is returned to after a finally clause in non-exceptional execution.
     void* emitAddLabel(VARSET_VALARG_TP GCvars, regMaskTP gcrefRegs, regMaskTP byrefRegs, BOOL isFinallyTarget = FALSE);
 
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_)
 
     void emitGetInstrDescs(insGroup* ig, instrDesc** id, int* insCnt);
 
@@ -1773,7 +1926,19 @@ private:
 
     static void emitGenerateUnwindNop(instrDesc* id, void* context);
 
-#endif // _TARGET_ARMARCH_
+#elif defined(_TARGET_MIPS64_)
+    void emitGetInstrDescs(insGroup* ig, instrDesc** id, int* insCnt);
+    bool emitGetLocationInfo(emitLocation* emitLoc, insGroup** pig, instrDesc** pid, int* pinsRemaining = NULL);
+
+    bool emitNextID(insGroup*& ig, instrDesc*& id, int& insRemaining);
+
+    typedef void (*emitProcessInstrFunc_t)(instrDesc* id, void* context);
+
+    void emitWalkIDs(emitLocation* locFrom, emitProcessInstrFunc_t processFunc, void* context);
+
+    static void emitGenerateUnwindNop(instrDesc* id, void* context);
+
+#endif // _TARGET_MIPS64_
 
 #ifdef _TARGET_X86_
     void emitMarkStackLvl(unsigned stackLevel);
@@ -1935,7 +2100,7 @@ public:
     void emitInsSanityCheck(instrDesc* id);
 #endif
 
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_)
     // Returns true if instruction "id->idIns()" writes to a register that might be used to contain a GC
     // pointer. This exempts the SP and PC registers, and floating point registers. Memory access
     // instructions that pre- or post-increment their memory address registers are *not* considered to write
@@ -1953,7 +2118,10 @@ public:
 
     // Returns "true" if instruction "id->idIns()" writes to a LclVar stack slot pair.
     bool emitInsWritesToLclVarStackLocPair(instrDesc* id);
-#endif // _TARGET_ARMARCH_
+#elif defined(_TARGET_MIPS64_)
+    bool emitInsMayWriteToGCReg(instrDesc* id);
+    bool emitInsWritesToLclVarStackLoc(instrDesc* id);
+#endif // _TARGET_MIPS64_
 
     /************************************************************************/
     /*    The following is used to distinguish helper vs non-helper calls   */

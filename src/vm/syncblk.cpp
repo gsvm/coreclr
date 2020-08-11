@@ -48,7 +48,9 @@ class  SyncBlockArray
 };
 
 // For in-place constructor
+#ifndef _TARGET_MIPS64_
 BYTE g_SyncBlockCacheInstance[sizeof(SyncBlockCache)];
+#endif
 
 SPTR_IMPL (SyncBlockCache, SyncBlockCache, s_pSyncBlockCache);
 
@@ -547,6 +549,9 @@ SyncBlockCache::~SyncBlockCache()
     }
 }
 
+#ifdef _TARGET_MIPS64_
+SyncBlockCache g_SyncBlockCacheInstance;
+#endif
 
 // When the GC determines that an object is dead the low bit of the 
 // m_Object field of SyncTableEntry is set, however it is not 
@@ -670,7 +675,11 @@ void SyncBlockCache::Start()
 #endif    
 
     SyncTableEntry::GetSyncTableEntry()[0].m_SyncBlock = 0;
+#ifndef _TARGET_MIPS64_
     SyncBlockCache::GetSyncBlockCache() = new (&g_SyncBlockCacheInstance) SyncBlockCache;
+#else
+    SyncBlockCache::GetSyncBlockCache() = &g_SyncBlockCacheInstance;
+#endif
 
     SyncBlockCache::GetSyncBlockCache()->m_EphemeralBitmap = bm;
 

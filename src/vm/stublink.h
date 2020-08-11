@@ -327,6 +327,15 @@ protected:
         UINT            m_cbStackSpace;         // Additional stack space for return buffer and stack alignment
 #endif // _TARGET_ARM64_
 
+#ifdef _TARGET_MIPS64_
+protected:
+        BOOL            m_fProlog;              // True if DescribeProlog has been called
+        UINT            m_cIntRegArgs;          // Count of int register arguments (x0 - x7)
+        UINT            m_cVecRegArgs;          // Count of FP register arguments (v0 - v7)
+        UINT            m_cCalleeSavedRegs;     // Count of callee saved registers (x19 - x28)
+        UINT            m_cbStackSpace;         // Additional stack space for return buffer and stack alignment
+#endif // _TARGET_MIPS64_
+
 #ifdef STUBLINKER_GENERATES_UNWIND_INFO
 
 #ifdef _DEBUG
@@ -1072,7 +1081,7 @@ class InstructionFormat
         }
 
         virtual UINT GetSizeOfInstruction(UINT refsize, UINT variationCode) = 0;
-        virtual VOID EmitInstruction(UINT refsize, __int64 fixedUpReference, BYTE *pCodeBuffer, UINT variationCode, BYTE *pDataBuffer) = 0;
+        virtual VOID EmitInstruction(UINT refsize, __int64 fixedUpReference, BYTE *pCodeBuffer, UINT variationCode, BYTE *pDataBuffer   MIPS64_ARG(BYTE adjustOffset) ) = 0;
         virtual UINT GetHotSpotOffset(UINT refsize, UINT variationCode)
         {
             WRAPPER_NO_CONTRACT;

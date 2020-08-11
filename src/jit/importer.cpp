@@ -7052,7 +7052,7 @@ bool Compiler::impTailCallRetTypeCompatible(var_types            callerRetType,
         return true;
     }
 
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     // Jit64 compat:
     if (callerRetType == TYP_VOID)
     {
@@ -9040,7 +9040,7 @@ GenTree* Compiler::impFixupStructReturnType(GenTree* op, CORINFO_CLASS_HANDLE re
         return impAssignMultiRegTypeToVar(op, retClsHnd);
     }
 
-#elif FEATURE_MULTIREG_RET && defined(_TARGET_ARM64_)
+#elif FEATURE_MULTIREG_RET && (defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_))
 
     // Is method returning a multi-reg struct?
     if (IsMultiRegReturnedType(retClsHnd))
@@ -16579,7 +16579,7 @@ bool Compiler::impReturnInstruction(BasicBlock* block, int prefixFlags, OPCODE& 
                     }
                 }
                 else
-#elif defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
                 ReturnTypeDesc retTypeDesc;
                 retTypeDesc.InitializeStructReturnType(this, retClsHnd);
                 unsigned retRegCount = retTypeDesc.GetReturnRegCount();
@@ -19848,6 +19848,14 @@ bool Compiler::IsTargetIntrinsic(CorInfoIntrinsics intrinsicId)
         case CORINFO_INTRINSIC_Abs:
         case CORINFO_INTRINSIC_Round:
             return true;
+
+        default:
+            return false;
+    }
+#elif defined(_TARGET_MIPS64_)
+    switch (intrinsicId)
+    {
+        // MIPS64: will amend in the future
 
         default:
             return false;

@@ -480,7 +480,7 @@ typedef struct _HeapList
 
 #if defined(_TARGET_AMD64_)
     BYTE        CLRPersonalityRoutine[JUMP_ALLOCATE_SIZE];                 // jump thunk to personality routine
-#elif defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     UINT32      CLRPersonalityRoutine[JUMP_ALLOCATE_SIZE/sizeof(UINT32)];  // jump thunk to personality routine    
 #endif
 

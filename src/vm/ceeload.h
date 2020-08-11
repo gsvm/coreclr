@@ -108,6 +108,8 @@ extern VerboseLevel g_CorCompileVerboseLevel;
 // Use diasymreader until the package has an arm64 version - issue #7360
 //#define NATIVE_SYMBOL_READER_DLL W("Microsoft.DiaSymReader.Native.arm64.dll")
 #define NATIVE_SYMBOL_READER_DLL W("diasymreader.dll")
+#elif defined(_MIPS64_)
+#define NATIVE_SYMBOL_READER_DLL W("diasymreader.dll")
 #endif
 
 typedef DPTR(PersistentInlineTrackingMapNGen) PTR_PersistentInlineTrackingMapNGen;

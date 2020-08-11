@@ -62,6 +62,9 @@
 #if defined(_ARM64_)
 #error Cannot define both _X86_ and _ARM64_
 #endif
+#if defined(_MIPS64_)
+#error Cannot define both _X86_ and _MIPS64_
+#endif
 #define _HOST_X86_
 #elif defined(_AMD64_)
 #if defined(_X86_)
@@ -72,6 +75,9 @@
 #endif
 #if defined(_ARM64_)
 #error Cannot define both _AMD64_ and _ARM64_
+#endif
+#if defined(_MIPS64_)
+#error Cannot define both _AMD64_ and _MIPS64_
 #endif
 #define _HOST_AMD64_
 #elif defined(_ARM_)
@@ -84,6 +90,9 @@
 #if defined(_ARM64_)
 #error Cannot define both _ARM_ and _ARM64_
 #endif
+#if defined(_MIPS64_)
+#error Cannot define both _ARM_ and _MIPS64_
+#endif
 #define _HOST_ARM_
 #elif defined(_ARM64_)
 #if defined(_X86_)
@@ -95,12 +104,30 @@
 #if defined(_ARM_)
 #error Cannot define both _ARM64_ and _ARM_
 #endif
+#if defined(_MIPS64_)
+#error Cannot define both _ARM64_ and _MIPS64_
+#endif
 #define _HOST_ARM64_
+#elif defined(_MIPS64_)
+////FIXME for MIPS: all should add MIPS64.
+#if defined(_X86_)
+#error Cannot define both _MIPS64_ and _X86_
+#endif
+#if defined(_AMD64_)
+#error Cannot define both _MIPS64_ and _AMD64_
+#endif
+#if defined(_ARM_)
+#error Cannot define both _MIPS64_ and _ARM_
+#endif
+#if defined(_ARM64_)
+#error Cannot define both _MIPS64_ and _ARM64_
+#endif
+#define _HOST_MIPS64_
 #else
 #error Unsupported or unset host architecture
 #endif
 
-#if defined(_HOST_AMD64_) || defined(_HOST_ARM64_)
+#if defined(_HOST_AMD64_) || defined(_HOST_ARM64_) || defined(_HOST_MIPS64_)
 #define _HOST_64BIT_
 #endif
 
@@ -156,11 +183,27 @@
 #if !defined(_HOST_ARM64_)
 #define _CROSS_COMPILER_
 #endif
+#elif defined(_TARGET_MIPS64_)
+#if defined(_TARGET_X86_)
+#error Cannot define both _TARGET_ARM64_ and _TARGET_X86_
+#endif
+#if defined(_TARGET_AMD64_)
+#error Cannot define both _TARGET_ARM64_ and _TARGET_AMD64_
+#endif
+#if defined(_TARGET_ARM_)
+#error Cannot define both _TARGET_ARM64_ and _TARGET_ARM_
+#endif
+#if defined(_TARGET_ARM64_)
+#error Cannot define both _TARGET_ARM64_ and _TARGET_MIPS64_
+#endif
+#if !defined(_HOST_MIPS64_)
+#define _CROSS_COMPILER_
+#endif
 #else
 #error Unsupported or unset target architecture
 #endif
 
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 #ifndef _TARGET_64BIT_
 #define _TARGET_64BIT_
 #endif // _TARGET_64BIT_
@@ -173,6 +216,7 @@
 #ifdef _TARGET_ARM_
 #error Cannot define both _TARGET_ARM_ and _TARGET_64BIT_
 #endif // _TARGET_ARM_
+////FIXME for MIPS.
 #endif // _TARGET_64BIT_
 
 #if defined(_TARGET_X86_) || defined(_TARGET_AMD64_)
@@ -224,6 +268,8 @@
 #define IMAGE_FILE_MACHINE_TARGET IMAGE_FILE_MACHINE_ARMNT
 #elif defined(_TARGET_ARM64_)
 #define IMAGE_FILE_MACHINE_TARGET IMAGE_FILE_MACHINE_ARM64 // 0xAA64
+#elif defined(_TARGET_MIPS64_)
+#define IMAGE_FILE_MACHINE_TARGET IMAGE_FILE_MACHINE_MIPS64 // 0xDD64
 #else
 #error Unsupported or unset target architecture
 #endif
@@ -276,15 +322,24 @@
 #define UNIX_AMD64_ABI_ONLY(x)
 #endif // defined(UNIX_AMD64_ABI)
 
-#if defined(UNIX_AMD64_ABI) || !defined(_TARGET_64BIT_) || (defined(_TARGET_WINDOWS_) && defined(_TARGET_ARM64_))
+#if defined(_TARGET_MIPS64_)
+#define _TARGET_MIPS64_ONLY_ARG(x) , x
+#define _TARGET_MIPS64_ONLY(x) x
+#else // !_TARGET_MIPS64_
+#define _TARGET_MIPS64_ONLY_ARG(x)
+#define _TARGET_MIPS64_ONLY(x)
+#endif // _TARGET_MIPS64_
+
+////FIXME for MIPS.
+#if defined(UNIX_AMD64_ABI) || !defined(_TARGET_64BIT_) || (defined(_TARGET_WINDOWS_) && (defined(_TARGET_ARM64_))) || defined(_TARGET_MIPS64_)
 #define FEATURE_PUT_STRUCT_ARG_STK 1
 #define PUT_STRUCT_ARG_STK_ONLY_ARG(x) , x
 #define PUT_STRUCT_ARG_STK_ONLY(x) x
-#else // !(defined(UNIX_AMD64_ABI) && defined(_TARGET_64BIT_) && !(defined(_TARGET_WINDOWS_) && defined(_TARGET_ARM64_))
+#else // !(defined(UNIX_AMD64_ABI) && defined(_TARGET_64BIT_) && !(defined(_TARGET_WINDOWS_) && defined(_TARGET_ARM64_)) && !defined(_TARGET_MIPS64_)
 #define PUT_STRUCT_ARG_STK_ONLY_ARG(x)
 #define PUT_STRUCT_ARG_STK_ONLY(x)
 #endif // !(defined(UNIX_AMD64_ABI) && defined(_TARGET_64BIT_) && !(defined(_TARGET_WINDOWS_) &&
-       // defined(_TARGET_ARM64_))
+       // defined(_TARGET_ARM64_)) && !defined(_TARGET_MIPS64_)
 
 #if defined(UNIX_AMD64_ABI)
 #define UNIX_AMD64_ABI_ONLY_ARG(x) , x
@@ -294,7 +349,8 @@
 #define UNIX_AMD64_ABI_ONLY(x)
 #endif // defined(UNIX_AMD64_ABI)
 
-#if defined(UNIX_AMD64_ABI) || defined(_TARGET_ARM64_)
+////FIXME for MIPS.
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 #define MULTIREG_HAS_SECOND_GC_RET 1
 #define MULTIREG_HAS_SECOND_GC_RET_ONLY_ARG(x) , x
 #define MULTIREG_HAS_SECOND_GC_RET_ONLY(x) x
@@ -307,7 +363,8 @@
 // Arm64 Windows supports FEATURE_ARG_SPLIT, note this is different from
 // the official Arm64 ABI.
 // Case: splitting 16 byte struct between x7 and stack
-#if (defined(_TARGET_ARM_) || (defined(_TARGET_WINDOWS_) && defined(_TARGET_ARM64_)))
+////FIXME for MIPS.
+#if (defined(_TARGET_ARM_) || (defined(_TARGET_WINDOWS_) && (defined(_TARGET_ARM64_))) || defined(_TARGET_MIPS64_))
 #define FEATURE_ARG_SPLIT 1
 #else
 #define FEATURE_ARG_SPLIT 0

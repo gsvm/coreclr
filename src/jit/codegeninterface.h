@@ -112,6 +112,10 @@ private:
     static const insFlags instInfo[INS_count];
 #elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
     static const BYTE instInfo[INS_count];
+#elif defined(_TARGET_MIPS64_)
+#pragma message("Unimplemented yet on MIPS.")
+////FIXME for MIPS.
+    static const BYTE instInfo[INS_count];
 #else
 #error Unsupported target architecture
 #endif
@@ -192,6 +196,11 @@ public:
     virtual void SetSaveFpLrWithAllCalleeSavedRegisters(bool value) = 0;
     virtual bool IsSaveFpLrWithAllCalleeSavedRegisters() const      = 0;
 #endif // _TARGET_ARM64_
+
+#ifdef _TARGET_MIPS64_
+    virtual void SetSaveFpRaWithAllCalleeSavedRegisters(bool value) = 0;
+    virtual bool IsSaveFpRaWithAllCalleeSavedRegisters() const      = 0;
+#endif // _TARGET_MIPS64_
 
     regNumber genGetThisArgReg(GenTreeCall* call) const;
 
@@ -302,7 +311,11 @@ public:
     bool validImmForAdd(target_ssize_t imm, insFlags flags);
     bool validImmForAlu(target_ssize_t imm);
     bool validImmForMov(target_ssize_t imm);
+#ifndef _TARGET_MIPS64_
     bool validImmForBL(ssize_t addr);
+#else
+    bool validImmForBAL(ssize_t addr);
+#endif
 
     instruction ins_Load(var_types srcType, bool aligned = false);
     instruction ins_Store(var_types dstType, bool aligned = false);
@@ -358,7 +371,7 @@ public:
         m_cgInterruptible = value;
     }
 
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
     __declspec(property(get = getHasTailCalls, put = setHasTailCalls)) bool hasTailCalls;
     bool getHasTailCalls()
     {
@@ -372,7 +385,7 @@ public:
 
 private:
     bool m_cgInterruptible;
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
     bool m_cgHasTailCalls;
 #endif // _TARGET_ARMARCH_
 

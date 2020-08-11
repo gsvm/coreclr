@@ -1873,6 +1873,10 @@ MethodTableBuilder::BuildMethodTableThrowing(
 #endif // FEATURE_HFA
         SystemVAmd64CheckForPassStructInRegister();
 #endif // UNIX_AMD64_ABI
+
+#ifdef _TARGET_MIPS64_
+        MIPS64CheckForPassStructInRegister();
+#endif // _TARGET_MIPS64_
     }
 
 #ifdef UNIX_AMD64_ABI
@@ -8249,6 +8253,42 @@ void MethodTableBuilder::StoreEightByteClassification(SystemVStructRegisterPassi
 
 #endif // UNIX_AMD64_ABI
 
+#ifdef _TARGET_MIPS64_
+// checks whether the struct is enregisterable.
+void MethodTableBuilder::MIPS64CheckForPassStructInRegister()
+{
+    STANDARD_VM_CONTRACT;
+
+    // This method should be called for valuetypes only
+    _ASSERTE(IsValueClass());
+
+    TypeHandle th(GetHalfBakedMethodTable());
+
+    if (th.IsTypeDesc())
+    {
+        // Not an enregisterable managed structure.
+        return;
+    }
+
+    DWORD totalStructSize = bmtFP->NumInstanceFieldBytes;
+
+    MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR structDesc;
+    structDesc.structSize = totalStructSize;
+    GetHalfBakedMethodTable()->ClassifyEightBytes(&structDesc, false);
+    StoreEightByteClassification(&structDesc);
+}
+
+// Store the eightbyte classification into the EEClass
+void MethodTableBuilder::StoreEightByteClassification(MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* helper)
+{
+    EEClass* eeClass = GetHalfBakedMethodTable()->GetClass();
+    LoaderAllocator* pAllocator = MethodTableBuilder::GetLoaderAllocator();
+    AllocMemTracker* pamTracker = MethodTableBuilder::GetMemTracker();
+    EnsureOptionalFieldsAreAllocated(eeClass, pamTracker, pAllocator->GetLowFrequencyHeap());
+    eeClass->SetEightByteClassification(helper->eightByteCount, helper->eightByteClassifications);
+}
+
+#endif // _TARGET_MIPS64_
 //---------------------------------------------------------------------------------------
 //
 // make sure that no object fields are overlapped incorrectly and define the

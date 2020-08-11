@@ -28,10 +28,10 @@ public:
         m_argLocDescForStructInRegs(argLocDescForStructInRegs)
     {
         LIMITED_METHOD_CONTRACT;
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
         _ASSERTE((argLocDescForStructInRegs != NULL) || (offset != TransitionBlock::StructInRegsOffset));
 #elif defined(_TARGET_ARM64_)
-        // This assert is not interesting on arm64. argLocDescForStructInRegs could be
+        // This assert is not interesting on arm64/mips64. argLocDescForStructInRegs could be
         // initialized if the args are being enregistered.
 #else        
         _ASSERTE(argLocDescForStructInRegs == NULL);
@@ -257,6 +257,198 @@ public:
     }
 
 #endif // UNIX_AMD64_ABI
+
+#if defined(_TARGET_MIPS64_)
+
+    // Returns true if the ArgDestination represents a struct passed in registers.
+    bool IsStructPassedInRegs()
+    {
+        LIMITED_METHOD_CONTRACT;
+        return m_offset == TransitionBlock::StructInRegsOffset;
+    }
+
+    // Get destination address for floating point fields of a struct passed in registers.
+    PTR_VOID GetStructFloatRegDestinationAddress()
+    {
+        LIMITED_METHOD_CONTRACT;
+        _ASSERTE(IsStructPassedInRegs());
+        int offset = TransitionBlock::GetOffsetOfFloatArgumentRegisters() + m_argLocDescForStructInRegs->m_idxFloatReg * 8;
+        return dac_cast<PTR_VOID>(dac_cast<TADDR>(m_base) + offset);
+    }
+
+    // Get destination address for non-floating point fields of a struct passed in registers.
+    PTR_VOID GetStructGenRegDestinationAddress()
+    {
+        LIMITED_METHOD_CONTRACT;
+        _ASSERTE(IsStructPassedInRegs());
+        int offset = TransitionBlock::GetOffsetOfArgumentRegisters() + m_argLocDescForStructInRegs->m_idxGenReg * 8;
+        return dac_cast<PTR_VOID>(dac_cast<TADDR>(m_base) + offset);
+    }
+
+    // Get destination address for stack fields of a struct that splited.
+    PTR_VOID GetStructStackDestinationAddress()
+    {
+        LIMITED_METHOD_CONTRACT;
+        _ASSERTE(IsStructPassedInRegs());
+        int offset = TransitionBlock::GetOffsetOfArgs();
+        return dac_cast<PTR_VOID>(dac_cast<TADDR>(m_base) + offset);
+    }
+
+
+#ifndef DACCESS_COMPILE
+/*
+    // Zero struct argument stored in registers described by the current ArgDestination.
+    // Arguments:
+    //  fieldBytes - size of the structure
+    void ZeroStructInRegisters(int fieldBytes)
+    {
+        STATIC_CONTRACT_NOTHROW;
+        STATIC_CONTRACT_GC_NOTRIGGER;
+        STATIC_CONTRACT_FORBID_FAULT;
+        STATIC_CONTRACT_MODE_COOPERATIVE;
+
+        // To zero the struct, we create a zero filled array of large enough size and
+        // then copy it to the registers. It is implemented this way to keep the complexity
+        // of dealing with the eightbyte classification in single function.
+        // This function is used rarely and so the overhead of reading the zeros from
+        // the stack is negligible.
+        long long zeros[CLR_SYSTEMV_MAX_EIGHTBYTES_COUNT_TO_PASS_IN_REGISTERS] = {};
+        _ASSERTE(sizeof(zeros) >= (size_t)fieldBytes);
+
+        CopyStructToRegisters(zeros, fieldBytes, 0);
+    }
+*/
+
+    // Copy struct argument into registers described by the current ArgDestination.
+    // Arguments:
+    //  src = source data of the structure
+    //  fieldBytes - size of the structure
+    //  destOffset - nonzero when copying values into Nullable<T>, it is the offset
+    //               of the T value inside of the Nullable<T>
+    void CopyStructToRegisters(void *src, int fieldBytes, int destOffset)
+    {
+        STATIC_CONTRACT_NOTHROW;
+        STATIC_CONTRACT_GC_NOTRIGGER;
+        STATIC_CONTRACT_FORBID_FAULT;
+        STATIC_CONTRACT_MODE_COOPERATIVE;
+
+        _ASSERTE(IsStructPassedInRegs());
+        // Is it useful for MIPS? It must be zero temporarily.
+        _ASSERTE(destOffset == 0);
+
+        BYTE* genRegDest = (BYTE*)GetStructGenRegDestinationAddress();
+        BYTE* floatRegDest = (BYTE*)GetStructFloatRegDestinationAddress();
+        BYTE* stackDest = (BYTE*)GetStructStackDestinationAddress();
+        INDEBUG(int remainingBytes = fieldBytes;)
+
+        EEClass* eeClass = m_argLocDescForStructInRegs->m_eeClass;
+        _ASSERTE(eeClass != NULL);
+
+        int stackSlot = 0;
+        // We start at the first eightByte that the destOffset didn't skip completely.
+        for (int i = destOffset / 8; i < eeClass->GetNumberEightBytes(); i++)
+        {
+            if (m_argLocDescForStructInRegs->m_idxGenReg + i < 8)
+            {
+                //int eightByteSize = eeClass->GetEightByteSize(i);
+                MIPS64ClassificationType eightByteClassification = eeClass->GetEightByteClassification(i);
+
+                // Adjust the size of the first eightByte by the destOffset
+                //eightByteSize -= (destOffset & 7);
+                //destOffset = 0;
+
+                //_ASSERTE(remainingBytes >= eightByteSize);
+
+                if (eightByteClassification == MIPS64ClassificationTypeDouble)
+                {
+                    *(UINT64*)floatRegDest = *(UINT64*)src;
+                    floatRegDest += 8;
+                }
+                else
+                {
+                    _ASSERTE(IS_ALIGNED((SIZE_T)genRegDest, 8));
+                    *(UINT64*)genRegDest = *(UINT64*)src;
+                    genRegDest += 8;
+                }
+            }
+            else
+            {
+                _ASSERTE(stackSlot < m_argLocDescForStructInRegs->m_cStack);
+                *(UINT64*)stackDest = *(UINT64*)src;
+                stackDest += 8;
+                stackSlot++;
+            }
+
+            src = (BYTE*)src + 8;
+            INDEBUG(remainingBytes -= 8;)
+        }
+
+        _ASSERTE(remainingBytes <= 0);
+    }
+
+#endif //DACCESS_COMPILE
+
+    // Report managed object pointers in the struct in registers
+    // Arguments:
+    //  fn - promotion function to apply to each managed object pointer
+    //  sc - scan context to pass to the promotion function
+    //  fieldBytes - size of the structure
+    void ReportPointersFromStructInRegisters(promote_func *fn, ScanContext *sc, int fieldBytes)
+    {
+        LIMITED_METHOD_CONTRACT;
+
+        // SPAN-TODO: GC reporting - https://github.com/dotnet/coreclr/issues/8517
+
+       _ASSERTE(IsStructPassedInRegs());
+
+        TADDR genRegDest = dac_cast<TADDR>(GetStructGenRegDestinationAddress());
+        TADDR stackDest = dac_cast<TADDR>(GetStructStackDestinationAddress());
+        INDEBUG(int remainingBytes = fieldBytes;)
+
+        EEClass* eeClass = m_argLocDescForStructInRegs->m_eeClass;
+        _ASSERTE(eeClass != NULL);
+
+        int stackSlot = 0;
+        for (int i = 0; i < eeClass->GetNumberEightBytes() && i < 8; i++)
+        {
+            MIPS64ClassificationType eightByteClassification = eeClass->GetEightByteClassification(i);
+
+            _ASSERTE(remainingBytes >= 8);
+
+            if (m_argLocDescForStructInRegs->m_idxGenReg + i < 8)
+            {
+                if ((eightByteClassification == MIPS64ClassificationTypeIntegerReference) ||
+                    (eightByteClassification == MIPS64ClassificationTypeIntegerByRef))
+                {
+                    _ASSERTE(IS_ALIGNED((SIZE_T)genRegDest, 8));
+
+                    uint32_t flags = eightByteClassification == MIPS64ClassificationTypeIntegerByRef ? GC_CALL_INTERIOR : 0;
+                    (*fn)(dac_cast<PTR_PTR_Object>(genRegDest), sc, flags);
+                }
+                genRegDest += 8;
+            }
+            else
+            {
+                _ASSERTE(stackSlot < m_argLocDescForStructInRegs->m_cStack);
+                if ((eightByteClassification == MIPS64ClassificationTypeIntegerReference) ||
+                    (eightByteClassification == MIPS64ClassificationTypeIntegerByRef))
+                {
+
+                    uint32_t flags = eightByteClassification == MIPS64ClassificationTypeIntegerByRef ? GC_CALL_INTERIOR : 0;
+                    (*fn)(dac_cast<PTR_PTR_Object>(stackDest), sc, flags);
+                }
+                stackDest += 8;
+                stackSlot++;
+            }
+
+
+            INDEBUG(remainingBytes -= 8;)
+        }
+
+        //_ASSERTE(remainingBytes <= 0);
+    }
+
+#endif // _TARGET_MIPS64_
 
 };
 

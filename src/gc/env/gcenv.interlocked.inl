@@ -18,6 +18,9 @@ __forceinline void Interlocked::ArmInterlockedOperationBarrier()
     // See PAL_ArmInterlockedOperationBarrier() in the PAL
     __sync_synchronize();
 #endif // _ARM64_
+#ifdef _MIPS64_
+    __sync_synchronize();
+#endif //_MIPS64_
 }
 #endif // !_MSC_VER
 

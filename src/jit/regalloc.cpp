@@ -257,6 +257,16 @@ bool Compiler::rpMustCreateEBPFrame(INDEBUG(const char** wbReason))
     }
 #endif // _TARGET_ARM64_
 
+#ifdef _TARGET_MIPS64_
+    // TODO-MIPS64-NYI: This is temporary: force a frame pointer-based frame until genFnProlog
+    // can handle non-frame pointer frames.
+    if (!result)
+    {
+        INDEBUG(reason = "Temporary MIPS64 force frame pointer");
+        result = true;
+    }
+#endif // _TARGET_MIPS64_
+
 #ifdef DEBUG
     if ((result == true) && (wbReason != nullptr))
     {

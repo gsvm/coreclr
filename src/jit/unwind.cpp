@@ -399,7 +399,7 @@ UNATIVE_OFFSET Compiler::unwindGetCurrentOffset(FuncInfoDsc* func)
     }
     else
     {
-#if defined(_TARGET_AMD64_) || (defined(_TARGET_UNIX_) && (defined(_TARGET_ARMARCH_) || defined(_TARGET_X86_)))
+#if defined(_TARGET_AMD64_) || (defined(_TARGET_UNIX_) && (defined(_TARGET_ARMARCH_) || defined(_TARGET_X86_)) || defined(_TARGET_MIPS64_))
         assert(func->startLoc != nullptr);
         offset = func->startLoc->GetFuncletPrologOffset(genEmitter);
 #else
@@ -425,6 +425,10 @@ UNATIVE_OFFSET Compiler::unwindGetCurrentOffset(FuncInfoDsc* func)
 #elif defined(_TARGET_X86_)
 
 // See unwindX86.cpp
+
+#elif defined(_TARGET_MIPS64_)
+
+// See unwindMips64.cpp
 
 #else // _TARGET_*
 

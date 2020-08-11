@@ -22,6 +22,9 @@
 #define ELF_ARCH  EM_AARCH64
 #elif defined(__arm__)
 #define ELF_ARCH  EM_ARM
+#elif defined(__mips64__)
+/////FIXME for MIPS.
+#define ELF_ARCH  EM_MIPS
 #endif
 
 #define PH_HDR_CANARY 0xFFFF

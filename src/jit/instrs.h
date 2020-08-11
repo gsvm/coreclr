@@ -8,6 +8,8 @@
 #include "instrsarm.h"
 #elif defined(_TARGET_ARM64_)
 #include "instrsarm64.h"
+#elif defined(_TARGET_MIPS64_)
+#include "instrsmips64.h"
 #else
 #error Unsupported or unset target architecture
 #endif // target type

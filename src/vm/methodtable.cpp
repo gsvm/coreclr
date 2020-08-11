@@ -2173,6 +2173,519 @@ BOOL MethodTable::IsClassPreInited()
 
 //========================================================================================
 
+#if defined(_TARGET_MIPS64_)
+
+void MethodTable::ClassifyEightBytes(MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr, bool useNativeLayout)
+{
+    if (useNativeLayout)
+    {
+        return ClassifyEightBytesWithNativeLayout(structPassInRegDescPtr);
+    }
+    else
+    {
+        return ClassifyEightBytesWithManagedLayout(structPassInRegDescPtr);
+    }
+}
+
+void MethodTable::ClassifyEightBytesWithManagedLayout(MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr)
+{
+    CONTRACTL
+    {
+        THROWS;
+        GC_TRIGGERS;
+        MODE_ANY;
+    }
+    CONTRACTL_END;
+
+    DWORD numIntroducedFields = GetNumIntroducedInstanceFields();
+
+    // It appears the VM gives a struct with no fields of size 1.
+    // Don't pass in register such structure.
+    if (numIntroducedFields == 0)
+    {
+        structPassInRegDescPtr->eightByteCount = (structPassInRegDescPtr->structSize + 7) / TARGET_POINTER_SIZE;
+        return;
+    }
+
+    /* FIXME for MIPS
+    // The SIMD Intrinsic types are meant to be handled specially and should not be passed as struct registers
+    if (IsIntrinsicType())
+    {
+        LPCUTF8 namespaceName;
+        LPCUTF8 className = GetFullyQualifiedNameInfo(&namespaceName);
+
+        if ((strcmp(className, "Vector256`1") == 0) || (strcmp(className, "Vector128`1") == 0) ||
+            (strcmp(className, "Vector64`1") == 0))
+        {
+            assert(strcmp(namespaceName, "System.Runtime.Intrinsics") == 0);
+
+            LOG((LF_JIT, LL_EVERYTHING, "%*s**** ClassifyEightBytesWithManagedLayout: struct %s is a SIMD intrinsic type; will not be enregistered\n",
+                nestingLevel * 5, "", this->GetDebugClassName()));
+
+            return false;
+        }
+
+        if ((strcmp(className, "Vector`1") == 0) && (strcmp(namespaceName, "System.Numerics") == 0))
+        {
+            LOG((LF_JIT, LL_EVERYTHING, "%*s**** ClassifyEightBytesWithManagedLayout: struct %s is a SIMD intrinsic type; will not be enregistered\n",
+                nestingLevel * 5, "", this->GetDebugClassName()));
+
+            return false;
+        }
+    }
+    */
+
+    FieldDesc *pFieldStart = GetApproxFieldDescListRaw();
+
+    CorElementType firstFieldElementType = pFieldStart->GetFieldType();
+
+    // A fixed buffer type is always a value type that has exactly one value type field at offset 0
+    // and who's size is an exact multiple of the size of the field.
+    // It is possible that we catch a false positive with this check, but that chance is extremely slim
+    // and the user can always change their structure to something more descriptive of what they want
+    // instead of adding additional padding at the end of a one-field structure.
+    // We do this check here to save looking up the FixedBufferAttribute when loading the field
+    // from metadata.
+    bool isFixedBuffer = numIntroducedFields == 1
+                                && ( CorTypeInfo::IsPrimitiveType_NoThrow(firstFieldElementType)
+                                    || firstFieldElementType == ELEMENT_TYPE_VALUETYPE)
+                                && (pFieldStart->GetOffset() == 0)
+                                && HasLayout()
+                                && (GetNumInstanceFieldBytes() % pFieldStart->GetSize() == 0);
+
+    if (isFixedBuffer)
+    {
+        numIntroducedFields = GetNumInstanceFieldBytes() / pFieldStart->GetSize();
+    }
+
+    int i = 0;
+    int eightByteCount = 0;
+    DWORD previousFieldOffset = 0;
+    CorElementType previousFieldType = ELEMENT_TYPE_END;
+    for (unsigned int fieldIndex = 0; fieldIndex < numIntroducedFields; fieldIndex++)
+    {
+        FieldDesc* pField;
+        DWORD fieldOffset;
+
+        if (isFixedBuffer)
+        {
+            pField = pFieldStart;
+            fieldOffset = fieldIndex * pField->GetSize();
+        }
+        else
+        {
+            pField = &pFieldStart[fieldIndex];
+            fieldOffset = pField->GetOffset();
+        }
+
+        unsigned int fieldSize = pField->GetSize();
+        _ASSERTE(fieldSize != (unsigned int)-1);
+
+        // The field can't span past the end of the struct.
+        if (fieldOffset + fieldSize > structPassInRegDescPtr->structSize)
+        {
+            _ASSERTE(false && "Invalid struct size. The size of fields and overall size don't agree");
+        }
+
+        CorElementType fieldType = pField->GetFieldType();
+
+#ifdef _DEBUG
+        LPCUTF8 fieldName;
+        pField->GetName_NoThrow(&fieldName);
+#endif // _DEBUG
+
+        i = fieldOffset / 8;
+        if (fieldOffset == previousFieldOffset && fieldIndex > 0)
+        {
+            // This struct is union;
+            structPassInRegDescPtr->eightByteClassifications[i] = MIPS64ClassificationTypeUnknown;
+        }
+        else if (fieldType == ELEMENT_TYPE_R8)
+        {
+            if (i < 8)
+                structPassInRegDescPtr->eightByteClassifications[i] = MIPS64ClassificationTypeDouble;
+        }
+        else if (fieldType == ELEMENT_TYPE_R4 && numIntroducedFields == 1)
+        {
+            structPassInRegDescPtr->eightByteClassifications[0] = MIPS64ClassificationTypeFloat;
+        }
+        else if (fieldType == ELEMENT_TYPE_R4 && previousFieldType == ELEMENT_TYPE_R4 && numIntroducedFields == 2)
+        {
+            structPassInRegDescPtr->eightByteClassifications[0] = MIPS64ClassificationTypeTwoFloat;
+        }
+
+        previousFieldOffset = fieldOffset;
+        previousFieldType = fieldType;
+        eightByteCount = max(eightByteCount, ((fieldOffset + fieldSize + 7) / TARGET_POINTER_SIZE));
+    }
+
+    structPassInRegDescPtr->eightByteCount = eightByteCount;
+}
+
+void MethodTable::ClassifyEightBytesWithNativeLayout(MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr)
+{
+    CONTRACTL
+    {
+        THROWS;
+        GC_TRIGGERS;
+        MODE_ANY;
+    }
+    CONTRACTL_END;
+
+#ifdef DACCESS_COMPILE
+    // No register classification for this case.
+    return;
+#else // DACCESS_COMPILE
+
+    if (!HasLayout())
+    {
+        // If there is no native layout for this struct use the managed layout instead.
+        return ClassifyEightBytesWithManagedLayout(structPassInRegDescPtr);
+    }
+
+    const FieldMarshaler *pFieldMarshalers = GetLayoutInfo()->GetFieldMarshalers();
+    UINT  numIntroducedFields = GetLayoutInfo()->GetNumCTMFields();
+
+    // No fields.
+    if (numIntroducedFields == 0)
+    {
+        _ASSERTE(!"numIntroducedFields == 0");
+        return;
+    }
+
+    // A fixed buffer type is always a value type that has exactly one value type field at offset 0
+    // and who's size is an exact multiple of the size of the field.
+    // It is possible that we catch a false positive with this check, but that chance is extremely slim
+    // and the user can always change their structure to something more descriptive of what they want
+    // instead of adding additional padding at the end of a one-field structure.
+    // We do this check here to save looking up the FixedBufferAttribute when loading the field
+    // from metadata.
+    CorElementType firstFieldElementType = pFieldMarshalers->GetFieldDesc()->GetFieldType();
+    bool isFixedBuffer = numIntroducedFields == 1
+                                && ( CorTypeInfo::IsPrimitiveType_NoThrow(firstFieldElementType)
+                                    || firstFieldElementType == ELEMENT_TYPE_VALUETYPE)
+                                && (pFieldMarshalers->GetExternalOffset() == 0)
+                                && IsValueType()
+                                && (GetLayoutInfo()->GetNativeSize() % pFieldMarshalers->NativeSize() == 0);
+
+    if (isFixedBuffer)
+    {
+        numIntroducedFields = GetNativeSize() / pFieldMarshalers->NativeSize();
+    }
+
+    /* FIXME FOR MIPS
+    // The SIMD Intrinsic types are meant to be handled specially and should not be passed as struct registers
+    if (IsIntrinsicType())
+    {
+        LPCUTF8 namespaceName;
+        LPCUTF8 className = GetFullyQualifiedNameInfo(&namespaceName);
+
+        if ((strcmp(className, "Vector256`1") == 0) || (strcmp(className, "Vector128`1") == 0) ||
+            (strcmp(className, "Vector64`1") == 0))
+        {
+            assert(strcmp(namespaceName, "System.Runtime.Intrinsics") == 0);
+
+            LOG((LF_JIT, LL_EVERYTHING, "%*s**** ClassifyEightBytesWithNativeLayout: struct %s is a SIMD intrinsic type; will not be enregistered\n",
+                nestingLevel * 5, "", this->GetDebugClassName()));
+
+            return false;
+        }
+
+        if ((strcmp(className, "Vector`1") == 0) && (strcmp(namespaceName, "System.Numerics") == 0))
+        {
+            LOG((LF_JIT, LL_EVERYTHING, "%*s**** ClassifyEightBytesWithManagedLayout: struct %s is a SIMD intrinsic type; will not be enregistered\n",
+                nestingLevel * 5, "", this->GetDebugClassName()));
+
+            return false;
+        }
+    }
+    */
+
+    int i = 0;
+    int eightByteCount = 0;
+    DWORD previousFieldOffset = 0;
+    MIPS64ClassificationType previousFieldClassificationType = MIPS64ClassificationTypeUnknown;
+    for (unsigned int fieldIndex = 0; fieldIndex < numIntroducedFields; fieldIndex++)
+    {
+        const FieldMarshaler* pFieldMarshaler;
+        if (isFixedBuffer)
+        {
+            // Reuse the first field marshaler for all fields if a fixed buffer.
+            pFieldMarshaler = pFieldMarshalers;
+        }
+        else
+        {
+            pFieldMarshaler = (FieldMarshaler*)(((BYTE*)pFieldMarshalers) + MAXFIELDMARSHALERSIZE * fieldIndex);
+        }
+
+        FieldDesc *pField = pFieldMarshaler->GetFieldDesc();
+        CorElementType fieldType = pField->GetFieldType();
+
+        // Invalid field type.
+        if (fieldType == ELEMENT_TYPE_END)
+        {
+            _ASSERTE(!"fieldType == ELEMENT_TYPE_END");
+            return;
+        }
+
+        unsigned int fieldNativeSize = pFieldMarshaler->NativeSize();
+        DWORD fieldOffset = pFieldMarshaler->GetExternalOffset();
+
+        if (isFixedBuffer)
+        {
+            // Since we reuse the FieldMarshaler for fixed buffers, we need to adjust the offset.
+            fieldOffset += fieldIndex * fieldNativeSize;
+        }
+
+        _ASSERTE(fieldNativeSize != (unsigned int)-1);
+
+        // The field can't span past the end of the struct.
+        if ((fieldOffset + fieldNativeSize) > structPassInRegDescPtr->structSize)
+        {
+            _ASSERTE(false && "Invalid native struct size. The size of fields and overall size don't agree");
+            return;
+        }
+
+        MIPS64ClassificationType fieldClassificationType = MIPS64ClassificationTypeUnknown;
+
+#ifdef _DEBUG
+        LPCUTF8 fieldName;
+        pField->GetName_NoThrow(&fieldName);
+#endif // _DEBUG
+
+        // Some NStruct Field Types have extra information and require special handling
+        NStructFieldType cls = pFieldMarshaler->GetNStructFieldType();
+        if (cls == NFT_FIXEDCHARARRAYANSI)
+        {
+            fieldClassificationType = MIPS64ClassificationTypeInteger;
+        }
+        else if (cls == NFT_FIXEDARRAY) // FIXME for MIPS: It seems useless, delete it?
+        {
+            VARTYPE vtElement = ((FieldMarshaler_FixedArray*)pFieldMarshaler)->GetElementVT();
+            switch (vtElement)
+            {
+            case VT_EMPTY:
+            case VT_NULL:
+            case VT_BOOL:
+            case VT_I1:
+            case VT_I2:
+            case VT_I4:
+            case VT_I8:
+            case VT_UI1:
+            case VT_UI2:
+            case VT_UI4:
+            case VT_UI8:
+            case VT_PTR:
+            case VT_INT:
+            case VT_UINT:
+            case VT_LPSTR:
+            case VT_LPWSTR:
+            case VT_R4:
+            case VT_R8:
+            case VT_RECORD:
+            {
+                break;
+            }
+            case VT_DECIMAL:
+            case VT_DATE:
+            case VT_BSTR:
+            case VT_UNKNOWN:
+            case VT_DISPATCH:
+            case VT_SAFEARRAY:
+            case VT_ERROR:
+            case VT_HRESULT:
+            case VT_CARRAY:
+            case VT_USERDEFINED:
+            case VT_FILETIME:
+            case VT_BLOB:
+            case VT_STREAM:
+            case VT_STORAGE:
+            case VT_STREAMED_OBJECT:
+            case VT_STORED_OBJECT:
+            case VT_BLOB_OBJECT:
+            case VT_CF:
+            case VT_CLSID:
+            default:
+                // Not supported.
+                break;
+            }
+        }
+#ifdef FEATURE_COMINTEROP
+        else if (cls == NFT_INTERFACE)
+        {
+            // COMInterop not supported for CORECLR.
+            _ASSERTE(false && "COMInterop not supported for CORECLR.");
+            return;
+        }
+#ifdef FEATURE_CLASSIC_COMINTEROP
+        else if (cls == NFT_SAFEARRAY)
+        {
+            // COMInterop not supported for CORECLR.
+            _ASSERTE(false && "COMInterop not supported for CORECLR.");
+            return;
+        }
+#endif // FEATURE_CLASSIC_COMINTEROP
+#endif // FEATURE_COMINTEROP
+        else if (cls == NFT_NESTEDLAYOUTCLASS)
+        {
+        }
+        else if (cls == NFT_NESTEDVALUECLASS)
+        {
+        }
+        else if (cls == NFT_COPY1)
+        {
+            // The following CorElementTypes are the only ones handled with FieldMarshaler_Copy1.
+            switch (fieldType)
+            {
+            case ELEMENT_TYPE_I1:
+                fieldClassificationType = MIPS64ClassificationTypeInteger;
+                break;
+
+            case ELEMENT_TYPE_U1:
+                fieldClassificationType = MIPS64ClassificationTypeInteger;
+                break;
+
+            default:
+                break;
+            }
+        }
+        else if (cls == NFT_COPY2)
+        {
+            // The following CorElementTypes are the only ones handled with FieldMarshaler_Copy2.
+            switch (fieldType)
+            {
+            case ELEMENT_TYPE_CHAR:
+            case ELEMENT_TYPE_I2:
+            case ELEMENT_TYPE_U2:
+                fieldClassificationType = MIPS64ClassificationTypeInteger;
+                break;
+
+            default:
+                break;
+            }
+        }
+        else if (cls == NFT_COPY4)
+        {
+            // The following CorElementTypes are the only ones handled with FieldMarshaler_Copy4.
+            switch (fieldType)
+            {
+                // At this point, ELEMENT_TYPE_I must be 4 bytes long.  Same for ELEMENT_TYPE_U.
+            case ELEMENT_TYPE_I:
+            case ELEMENT_TYPE_I4:
+            case ELEMENT_TYPE_U:
+            case ELEMENT_TYPE_U4:
+            case ELEMENT_TYPE_PTR:
+                fieldClassificationType = MIPS64ClassificationTypeInteger;
+                break;
+
+            case ELEMENT_TYPE_R4:
+                fieldClassificationType = MIPS64ClassificationTypeFloat;
+                break;
+
+            default:
+                break;
+            }
+        }
+        else if (cls == NFT_COPY8)
+        {
+            // The following CorElementTypes are the only ones handled with FieldMarshaler_Copy8.
+            switch (fieldType)
+            {
+                // At this point, ELEMENT_TYPE_I must be 8 bytes long.  Same for ELEMENT_TYPE_U.
+            case ELEMENT_TYPE_I:
+            case ELEMENT_TYPE_I8:
+            case ELEMENT_TYPE_U:
+            case ELEMENT_TYPE_U8:
+            case ELEMENT_TYPE_PTR:
+                fieldClassificationType = MIPS64ClassificationTypeInteger;
+                break;
+
+            case ELEMENT_TYPE_R8:
+                fieldClassificationType = MIPS64ClassificationTypeDouble;
+                break;
+
+            default:
+                break;
+            }
+        }
+        else if (cls == NFT_FIXEDSTRINGUNI)
+        {
+            fieldClassificationType = MIPS64ClassificationTypeInteger;
+        }
+        else if (cls == NFT_FIXEDSTRINGANSI)
+        {
+            fieldClassificationType = MIPS64ClassificationTypeInteger;
+        }
+        else
+        {
+            // All other NStruct Field Types which do not require special handling.
+            switch (cls)
+            {
+#ifdef FEATURE_COMINTEROP
+            case NFT_HSTRING:
+            case NFT_VARIANT:
+            case NFT_VARIANTBOOL:
+            case NFT_CURRENCY:
+                // COMInterop not supported for CORECLR.
+                _ASSERTE(false && "COMInterop not supported for CORECLR.");
+                return;
+#endif  // FEATURE_COMINTEROP
+            case NFT_STRINGUNI:
+            case NFT_STRINGANSI:
+            case NFT_ANSICHAR:
+            case NFT_STRINGUTF8:
+            case NFT_WINBOOL:
+            case NFT_CBOOL:
+            case NFT_DELEGATE:
+            case NFT_SAFEHANDLE:
+            case NFT_CRITICALHANDLE:
+            case NFT_BSTR:
+                fieldClassificationType = MIPS64ClassificationTypeInteger;
+                break;
+
+            // It's not clear what the right behavior for NTF_DECIMAL and NTF_DATE is
+            // But those two types would only make sense on windows. We can revisit this later
+            case NFT_DECIMAL:
+            case NFT_DATE:
+            case NFT_ILLEGAL:
+            default:
+                break;
+            }
+        }
+
+        i = fieldOffset / 8;
+        if (fieldOffset == previousFieldOffset && fieldIndex > 0)
+        {
+            // This struct is union;
+            structPassInRegDescPtr->eightByteClassifications[i] = MIPS64ClassificationTypeUnknown;
+        }
+        else if (fieldClassificationType == MIPS64ClassificationTypeDouble)
+        {
+            if (i < 8)
+                structPassInRegDescPtr->eightByteClassifications[i] = MIPS64ClassificationTypeDouble;
+        }
+        else if (fieldClassificationType == MIPS64ClassificationTypeFloat && numIntroducedFields == 1)
+        {
+            structPassInRegDescPtr->eightByteClassifications[0] = MIPS64ClassificationTypeFloat;
+        }
+        else if (fieldClassificationType == MIPS64ClassificationTypeFloat && previousFieldClassificationType == MIPS64ClassificationTypeFloat && numIntroducedFields == 2)
+        {
+            structPassInRegDescPtr->eightByteClassifications[0] = MIPS64ClassificationTypeTwoFloat;
+        }
+
+        previousFieldOffset = fieldOffset;
+        previousFieldClassificationType = fieldClassificationType;
+        eightByteCount = max(eightByteCount, ((fieldOffset + fieldNativeSize + 7) / TARGET_POINTER_SIZE));
+    } // end per-field for loop
+
+    structPassInRegDescPtr->eightByteCount = eightByteCount;
+#endif // DACCESS_COMPILE
+}
+
+#endif // _TARGET_MIPS64_
+
+//========================================================================================
+
 #if defined(UNIX_AMD64_ABI_ITF)
 
 #if defined(_DEBUG) && defined(LOGGING)

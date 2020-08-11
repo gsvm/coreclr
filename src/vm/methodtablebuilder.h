@@ -2924,6 +2924,11 @@ private:
 
 #endif // UNIX_AMD64_ABI
 
+#ifdef _TARGET_MIPS64_
+    void MIPS64CheckForPassStructInRegister();
+    void StoreEightByteClassification(MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* helper);
+#endif // _TARGET_MIPS64_
+
     // this accesses the field size which is temporarily stored in m_pMTOfEnclosingClass
     // during class loading. Don't use any other time
     DWORD GetFieldSize(FieldDesc *pFD);

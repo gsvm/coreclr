@@ -87,6 +87,10 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DefineConstants>BIT64;ARM64;$(DefineConstants)</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Platform)' == 'mips64'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DefineConstants>BIT64;MIPS64;$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
 
   <!-- Configuration specific properties -->
   <PropertyGroup Condition="'$(Configuration)' == 'Debug' or '$(Configuration)' == 'Checked'">

@@ -29,7 +29,15 @@ const regMaskSmall regMasks[] = {
 #define REGDEF(name, rnum, mask, xname, wname) mask,
 #include "register.h"
 };
-#else // !_TARGET_ARM64_
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+#pragma  message("Unimplemented yet MIPS64")
+const regMaskSmall regMasks[] = {
+#define REGDEF(name, rnum, mask, xname, wname) mask,
+#include "register.h"
+};
+
+#else // !_TARGET_MIPS64_
 const regMaskSmall regMasks[] = {
 #define REGDEF(name, rnum, mask, sname) mask,
 #include "register.h"

@@ -3,8 +3,8 @@
 usage()
 {
     echo "Usage: $0 [BuildArch] [LinuxCodeName] [lldbx.y] [--skipunmount] --rootfsdir <directory>]"
-    echo "BuildArch can be: arm(default), armel, arm64, x86"
-    echo "LinuxCodeName - optional, Code name for Linux, can be: trusty, xenial(default), zesty, bionic, alpine. If BuildArch is armel, LinuxCodeName is jessie(default) or tizen."
+    echo "BuildArch can be: arm(default), armel, arm64, mips64el, x86"
+    echo "LinuxCodeName - optional, Code name for Linux, can be: trusty, xenial(default), zesty, bionic, alpine. If BuildArch is armel, LinuxCodeName is jessie(default) or tizen. If BuildArch is mips64el, LinuxCodeName is stretch(default)."
     echo "lldbx.y - optional, LLDB version, can be: lldb3.9(default), lldb4.0, lldb5.0, lldb6.0 no-lldb. Ignored for alpine"
     echo "--skipunmount - optional, will skip the unmount of rootfs folder."
     exit 1
@@ -81,6 +81,13 @@ while :; do
             __UbuntuArch=armel
             __UbuntuRepo="http://ftp.debian.org/debian/"
             __LinuxCodeName=jessie
+            ;;
+        mips64el)
+            __BuildArch=mips64el
+            __UbuntuArch=mips64el
+            __UbuntuRepo="http://ftp.debian.org/debian/"
+            __LinuxCodeName=stretch
+            __UbuntuPackages+=" liblzma-dev"
             ;;
         x86)
             __BuildArch=x86
@@ -173,6 +180,9 @@ done
 
 if [ "$__BuildArch" == "armel" ]; then
     __LLDB_Package="lldb-3.5-dev"
+fi
+if [ "$__BuildArch" == "mips64el" ]; then
+    __LLDB_Package=""
 fi
 __UbuntuPackages+=" ${__LLDB_Package:-}"
 

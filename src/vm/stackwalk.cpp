@@ -351,7 +351,7 @@ bool CrawlFrame::IsGcSafe()
     return GetCodeManager()->IsGcSafe(&codeInfo, GetRelOffset());
 }
 
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 bool CrawlFrame::HasTailCalls()
 {
     CONTRACTL {
@@ -690,6 +690,9 @@ PCODE Thread::VirtualUnwindLeafCallFrame(T_CONTEXT* pContext)
 #elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
 
     uControlPc = TADDR(pContext->Lr);
+
+#elif defined(_TARGET_MIPS64_)
+    uControlPc = TADDR(pContext->Ra);
 
 #else
     PORTABILITY_ASSERT("Thread::VirtualUnwindLeafCallFrame");

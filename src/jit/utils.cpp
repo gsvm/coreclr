@@ -150,6 +150,16 @@ const char* getRegName(regNumber reg, bool isFloat)
     };
     assert(reg < ArrLen(regNames));
     return regNames[reg];
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+#pragma  message("Unimplemented yet MIPS64")
+    static const char* const regNames[] = {
+#define REGDEF(name, rnum, mask, xname, wname) xname,
+#include "register.h"
+    };
+    assert(reg < ArrLen(regNames));
+    return regNames[reg];
+
 #else
     static const char* const regNames[] = {
 #define REGDEF(name, rnum, mask, sname) sname,
@@ -238,6 +248,18 @@ const char* getRegNameFloat(regNumber reg, var_types type)
     }
 
 #elif defined(_TARGET_ARM64_)
+
+    static const char* regNamesFloat[] = {
+#define REGDEF(name, rnum, mask, xname, wname) xname,
+#include "register.h"
+    };
+    assert((unsigned)reg < ArrLen(regNamesFloat));
+
+    return regNamesFloat[reg];
+
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+#pragma  message("Unimplemented yet MIPS64")
 
     static const char* regNamesFloat[] = {
 #define REGDEF(name, rnum, mask, xname, wname) xname,
@@ -336,12 +358,21 @@ void dspRegMask(regMaskTP regMask, size_t minSiz)
                 }
 #elif defined(_TARGET_X86_)
 // No register ranges
+#elif defined(_TARGET_MIPS64_)
+                /* FIXME for MIPS: */
+                //if ((REG_V0 <= regNum && regNum <= REG_S7) /*|| (REG_A0 <= regNum && regNum <= REG_RA)*/)
+                if (REG_AT <= regNum && regNum <= REG_T9) /*|| (REG_A0 <= regNum && regNum <= REG_RA)*/
+                {
+                    regHead    = regNum;
+                    inRegRange = true;
+                    sep        = "-";
+                }
 #else // _TARGET_*
 #error Unsupported or unset target architecture
 #endif // _TARGET_*
             }
 
-#if defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM64_)   //FIXME for MIPS64: mips64 ?!
             // We've already printed a register. Is this the end of a range?
             else if ((regNum == REG_INT_LAST) || (regNum == REG_R17) // last register before TEB
                      || (regNum == REG_R28))                         // last register before FP
@@ -1961,8 +1992,8 @@ double FloatingPointUtils::round(double x)
 // We will redirect the macro to this other functions if the macro is not defined for the platform.
 // This has the side effect of a possible implicit upcasting for arguments passed in and an explicit
 // downcasting for the _copysign() call.
-#if (defined(_TARGET_X86_) || defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)) && !defined(FEATURE_PAL)
-
+#if (defined(_TARGET_X86_) || defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) ||defined(_TARGET_MIPS64_)) && !defined(FEATURE_PAL)
+////FIXME for MIPS.
 #if !defined(_copysignf)
 #define _copysignf (float)_copysign
 #endif

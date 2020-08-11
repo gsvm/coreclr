@@ -66,6 +66,8 @@ class ZapperStats;
 #define MINIMUM_CODE_ALIGN 2
 #elif _TARGET_ARM64_
 #define MINIMUM_CODE_ALIGN 4
+#elif _TARGET_MIPS64_
+#define MINIMUM_CODE_ALIGN 8
 #else
 #define MINIMUM_CODE_ALIGN 1
 #endif

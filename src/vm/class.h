@@ -781,6 +781,15 @@ class EEClassOptionalFields
     unsigned int m_eightByteSizes[CLR_SYSTEMV_MAX_EIGHTBYTES_COUNT_TO_PASS_IN_REGISTERS];
 #endif // UNIX_AMD64_ABI
 
+#if defined(_TARGET_MIPS64_)
+    // Number of eightBytes in the following arrays
+    int m_numberEightBytes;
+    // Classification of the eightBytes
+    MIPS64ClassificationType m_eightByteClassifications[8];
+    // Size of data the eightBytes
+    unsigned int m_eightByteSizes[8];
+#endif // _TARGET_MIPS64_
+
     // Set default values for optional fields.
     inline void Init();
 
@@ -1690,6 +1699,36 @@ public:
         }
     }
 #endif // UNIX_AMD64_ABI    
+
+#if defined(_TARGET_MIPS64_)
+    // Get number of eightbytes used by a struct passed in registers.
+    inline int GetNumberEightBytes()
+    {
+        LIMITED_METHOD_CONTRACT;
+        _ASSERTE(HasOptionalFields());
+        return GetOptionalFields()->m_numberEightBytes;
+    }
+
+    // Get eightbyte classification for the eightbyte with the specified index.
+    inline MIPS64ClassificationType GetEightByteClassification(int index)
+    {
+        LIMITED_METHOD_CONTRACT;
+        _ASSERTE(HasOptionalFields());
+        return GetOptionalFields()->m_eightByteClassifications[index];
+    }
+
+    // Set the eightByte classification
+    inline void SetEightByteClassification(int eightByteCount, MIPS64ClassificationType *eightByteClassifications)
+    {
+        LIMITED_METHOD_CONTRACT;
+        _ASSERTE(HasOptionalFields());
+        GetOptionalFields()->m_numberEightBytes = eightByteCount;
+        for (int i = 0; i < 8; i++)
+        {
+            GetOptionalFields()->m_eightByteClassifications[i] = eightByteClassifications[i];
+        }
+    }
+#endif // _TARGET_MIPS64_
 
 #if defined(FEATURE_HFA)
     bool CheckForHFA(MethodTable ** pByValueClassCache);

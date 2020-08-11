@@ -11,7 +11,8 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 */
 
-#ifdef _TARGET_ARMARCH_
+////FIXME for MIPS: should seperately define for mips64.
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
 
 // Windows no longer imposes a maximum prolog size. However, we still have an
 // assert here just to inform us if we increase the size of the prolog
@@ -35,7 +36,15 @@ const unsigned MAX_EPILOG_SIZE_BYTES = 100;
 #define UW_MAX_FRAGMENT_SIZE_BYTES (1U << 20)
 #define UW_MAX_CODE_WORDS_COUNT 31
 #define UW_MAX_EPILOG_START_INDEX 0x3FFU
-#endif // _TARGET_ARM64_
+#elif defined(_TARGET_MIPS64_)
+const unsigned MAX_PROLOG_SIZE_BYTES = 200;
+const unsigned MAX_EPILOG_SIZE_BYTES = 200;
+#define UWC_END 0xE4   // "end" unwind code
+#define UWC_END_C 0xE5 // "end_c" unwind code
+#define UW_MAX_FRAGMENT_SIZE_BYTES (1U << 20)
+#define UW_MAX_CODE_WORDS_COUNT 31
+#define UW_MAX_EPILOG_START_INDEX 0x3FFU
+#endif // _TARGET_MIPS64_
 
 #define UW_MAX_EPILOG_COUNT 31                 // Max number that can be encoded in the "Epilog count" field
                                                // of the .pdata record
@@ -132,6 +141,8 @@ public:
         return b >= 0xFD;
 #elif defined(_TARGET_ARM64_)
         return (b == UWC_END); // TODO-ARM64-Bug?: what about the "end_c" code?
+#elif defined(_TARGET_MIPS64_)
+        return (b == UWC_END);
 #endif // _TARGET_ARM64_
     }
 
@@ -814,7 +825,7 @@ public:
     // Given the first byte of the unwind code, check that its opsize matches
     // the last instruction added in the emitter.
     void CheckOpsize(BYTE b1);
-#elif defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     void CheckOpsize(BYTE b1)
     {
     } // nothing to do; all instructions are 4 bytes

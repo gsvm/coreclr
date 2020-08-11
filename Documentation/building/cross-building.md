@@ -16,8 +16,8 @@ Build using "-arm" as the architecture. For example:
     C:\coreclr> build.cmd -arm -debug
 
 
-Cross Compilation for ARM, ARM64 or x86 on Linux
-================================================
+Cross Compilation for ARM, ARM64, mips64el or x86 on Linux
+==========================================================
 
 Through cross compilation, on Linux it is possible to build CoreCLR for arm or arm64.
 
@@ -35,6 +35,10 @@ In addition, to cross compile CoreCLR the binutils for the target are required. 
 and conversely for arm64:
 
     ben@ubuntu ~/git/coreclr/ $ sudo apt-get install binutils-aarch64-linux-gnu
+
+and conversely for mips64el:
+
+    ben@ubuntu ~/git/coreclr/ $ sudo apt-get install binutils-mips64el-linux-gnuabi64
 
 
 Requirements for targetting ARM or ARM64 Alpine Linux
@@ -58,8 +62,8 @@ Generating the rootfs
 The `cross\build-rootfs.sh` script can be used to download the files needed for cross compilation. It will generate a rootfs as this is what CoreCLR targets.
 
     Usage: ./cross/build-rootfs.sh [BuildArch] [LinuxCodeName] [lldbx.y] [--skipunmount]
-    BuildArch can be: arm(default), armel, arm64, x86
-    LinuxCodeName - optional, Code name for Linux, can be: trusty(default), vivid, wily, xenial or alpine. If BuildArch is armel, LinuxCodeName is jessie(default) or tizen.
+    BuildArch can be: arm(default), armel, arm64, mips64el, x86
+    LinuxCodeName - optional, Code name for Linux, can be: trusty(default), vivid, wily, xenial or alpine. If BuildArch is armel, LinuxCodeName is jessie(default) or tizen. If BuildArch is mips64el, LinuxCodeName is stretch(default).
     lldbx.y - optional, LLDB version, can be: lldb3.6(default), lldb3.8. This is ignored when building rootfs for Alpine Linux.
 
 The `build-rootfs.sh` script must be run as root as it has to make some symlinks to the system, it will by default generate the rootfs in `cross\rootfs\<BuildArch>` however this can be changed by setting the `ROOTFS_DIR` environment variable.
@@ -88,6 +92,10 @@ and if you wanted to generate the rootfs elsewhere:
 
     hque@ubuntu ~/git/coreclr/ $ sudo ROOTFS_DIR=/home/ben/coreclr-cross/armel ./cross/build-rootfs.sh armel tizen
 
+For example, to generate an mips64el rootfs:
+
+    ben@ubuntu ~/git/coreclr/ $ sudo ./eng/common/cross/build-rootfs.sh mips64el stretch
+
 
 Cross compiling CoreCLR
 -----------------------
@@ -101,8 +109,20 @@ And with:
 
     ben@ubuntu ~/git/coreclr/ $ ROOTFS_DIR=/home/ben/coreclr-cross/arm ./build.sh arm debug verbose cross
 
+And with `ROOTFS_DIR` for Loongnix:
+
+    $ ROOTFS_DIR=/home/loongson/chroots/mips64el_loongnix ./build.sh ignorewarnings mips64 cross cmakeargs -DOBJCOPY=/home/loongson/chroots/mips64el_loongnix/usr/bin/mips64el-linux-gnuabi64-objcopy
+
+For Debian 9:
+
+    $ ROOTFS_DIR=/home/loongson/chroots/mips64el ./build.sh ignorewarnings mips64 cross
+
 As usual, the resulting binaries will be found in `bin/Product/BuildOS.BuildArch.BuildType/`
 
+Also the System.Private.CoreLib for mips64el, for example:
+
+    $ file ./bin/Product/Linux.mips64.Debug/System.Private.CoreLib.dll
+    ./bin/Product/Linux.mips64.Debug/System.Private.CoreLib.dll: PE32+ executable (DLL) (console) Mono/.Net assembly, for MS Windows
 
 Compiling System.Private.CoreLib for ARM Linux
 ==============================================

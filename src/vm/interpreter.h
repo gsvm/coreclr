@@ -994,6 +994,8 @@ private:
         static const int MaxNumFPRegArgSlots = 8;
 #elif defined(_AMD64_)
         static const int MaxNumFPRegArgSlots = 4;
+#elif defined(_MIPS64_)
+        static const int MaxNumFPRegArgSlots = 8;
 #endif
 
         ~ArgState()
@@ -2045,6 +2047,8 @@ unsigned short Interpreter::NumberOfIntegerRegArgs() { return 4; }
 #elif  defined(_ARM_)
 unsigned short Interpreter::NumberOfIntegerRegArgs() { return 4; }
 #elif defined(_ARM64_)
+unsigned short Interpreter::NumberOfIntegerRegArgs() { return 8; }
+#elif defined(_MIPS64_)
 unsigned short Interpreter::NumberOfIntegerRegArgs() { return 8; }
 #else
 #error Unsupported architecture.

@@ -22,20 +22,52 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
+#include <stdlib.h>
+
 #include "unwind_i.h"
 
-int
-unw_get_proc_info (unw_cursor_t *cursor, unw_proc_info_t *pi)
+unw_addr_space_t
+unw_create_addr_space (unw_accessors_t *a, int byte_order)
 {
-  struct cursor *c = (struct cursor *) cursor;
-  int ret;
+#ifdef UNW_LOCAL_ONLY
+  return NULL;
+#else
+  unw_addr_space_t as;
 
-  /* We can only unwind using Dwarf into on MIPS: return failure code
-     if it's not present.  */
-  ret = dwarf_make_proc_info (&c->dwarf);
-  if (ret < 0)
-    return ret;
+  /*
+   * MIPS supports only big or little-endian, not weird stuff like
+   * PDP_ENDIAN.
+   */
+  if (byte_order != 0
+      && byte_order != __LITTLE_ENDIAN
+      && byte_order != __BIG_ENDIAN)
+    return NULL;
 
-  *pi = c->dwarf.pi;
-  return 0;
+  as = malloc (sizeof (*as));
+  if (!as)
+    return NULL;
+
+  memset (as, 0, sizeof (*as));
+
+  as->acc = *a;
+
+  if (byte_order == 0)
+    /* use host default: */
+    as->big_endian = (__BYTE_ORDER == __BIG_ENDIAN);
+  else
+    as->big_endian = (byte_order == __BIG_ENDIAN);
+
+  /* FIXME!  There is no way to specify the ABI.  */
+#if _MIPS_SIM == _ABIO32
+  as->abi = UNW_MIPS_ABI_O32;
+#elif _MIPS_SIM == _ABIN32
+  as->abi = UNW_MIPS_ABI_N32;
+#elif _MIPS_SIM == _ABI64
+  as->abi = UNW_MIPS_ABI_N64;
+#else
+# error Unsupported ABI
+#endif
+
+  return as;
+#endif
 }

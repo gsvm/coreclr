@@ -170,6 +170,9 @@ function check_cpu_architecture {
         aarch64)
             __arch=arm64
             ;;
+        mips64)
+            __arch=mips64
+            ;;
         *)
             echo "Unknown CPU $CPUName detected, configuring as if for x64"
             __arch=x64
@@ -248,6 +251,9 @@ do
             ;;
         arm64)
             buildArch="arm64"
+            ;;
+        mips64)
+            buildArch="mips64"
             ;;
         debug|Debug)
             buildConfiguration="Debug"

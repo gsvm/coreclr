@@ -7,7 +7,11 @@
 #define _INSTR_H_
 /*****************************************************************************/
 
+#ifdef _TARGET_MIPS64_
+#define BAD_CODE 0XFFFFFFFF
+#else
 #define BAD_CODE 0x0BADC0DE // better not match a real encoding!
+#endif
 
 /*****************************************************************************/
 
@@ -46,6 +50,15 @@ enum instruction : unsigned
     #define INST9(id, nm, fp, ldst, fmt, e1, e2, e3, e4, e5, e6, e7, e8, e9) INS_##id,
     #include "instrs.h"
 
+    INS_lea,   // Not a real instruction. It is used for load the address of stack locals
+
+#elif defined(_TARGET_MIPS64_)
+    #define INSTS(id, nm, fp, ldst, fmt, e1) INS_##id,
+    #include "instrs.h"
+
+    INS_dneg,  // Not a real instruction. It will be translated to dsubu.
+    INS_neg,   // Not a real instruction. It will be translated to subu.
+    INS_not,   // Not a real instruction. It will be translated to nor.
     INS_lea,   // Not a real instruction. It is used for load the address of stack locals
 
 #else
@@ -101,6 +114,15 @@ enum insFlags: uint8_t
 };
 #elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
 // TODO-Cleanup: Move 'insFlags' under _TARGET_ARM_
+enum insFlags: unsigned
+{
+    INS_FLAGS_NOT_SET = 0x00,
+    INS_FLAGS_SET = 0x01,
+    INS_FLAGS_DONT_CARE = 0x02,
+};
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+#pragma message("Unimplemented yet MIPS")
 enum insFlags: unsigned
 {
     INS_FLAGS_NOT_SET = 0x00,
@@ -243,6 +265,41 @@ enum insBarrier : unsigned
     INS_BARRIER_ST    = 14,
     INS_BARRIER_SY    = 15,
 };
+#elif defined(_TARGET_MIPS64_)
+/* FIXME for MIPS. */
+enum insOpts : unsigned
+{
+    INS_OPTS_NONE,
+
+    INS_OPTS_RC,     // see ::emitIns_R_C().
+    INS_OPTS_RL,     // see ::emitIns_R_L().
+    INS_OPTS_JR,     // see ::emitIns_J_R().
+    INS_OPTS_J,     // see ::emitIns_J().
+    //INS_OPTS_J2,     // see ::emitIns_J().
+    INS_OPTS_C,     // see ::emitIns_Call().
+    INS_OPTS_RELOC,     // see ::emitIns_R_AI().
+    //INS_OPTS_,     // see ::().
+    //INS_OPTS_,     // see ::().
+};
+
+enum insBarrier : unsigned
+{
+    INS_BARRIER_OSHLD =  1,
+    INS_BARRIER_OSHST =  2,
+    INS_BARRIER_OSH   =  3,
+
+    INS_BARRIER_NSHLD =  5,
+    INS_BARRIER_NSHST =  6,
+    INS_BARRIER_NSH   =  7,
+
+    INS_BARRIER_ISHLD =  9,
+    INS_BARRIER_ISHST = 10,
+    INS_BARRIER_ISH   = 11,
+
+    INS_BARRIER_LD    = 13,
+    INS_BARRIER_ST    = 14,
+    INS_BARRIER_SY    = 15,
+};
 #endif
 
 #undef EA_UNKNOWN
@@ -351,6 +408,9 @@ enum InstructionSet
     InstructionSet_Sm3,       // ID_AA64ISAR0_EL1.SM3 is 1 or better
     InstructionSet_Sm4,       // ID_AA64ISAR0_EL1.SM4 is 1 or better
     InstructionSet_Sve,       // ID_AA64PFR0_EL1.SVE is 1 or better
+#elif defined(_TARGET_MIPS64_)
+    InstructionSet_Base,      // Base instructions available on all MIPS64 platforms
+    InstructionSet_Atomics,   // ll/sc
 #endif
     InstructionSet_NONE       // No instruction set is available indicating an invalid value
 };

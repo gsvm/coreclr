@@ -10,6 +10,8 @@ elseif(CLR_CMAKE_PLATFROM_ARCH_ARM)
     set(arch arm)
 elseif(CLR_CMAKE_PLATFORM_ARCH_I386)
     set(arch x86)
+elseif(CLR_CMAKE_PLATFORM_ARCH_MIPS64)
+    set(arch mips64)
 endif()
 
 set(PKG_MAJOR "1")

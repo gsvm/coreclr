@@ -198,7 +198,7 @@ GenTree* Lowering::LowerNode(GenTree* node)
             LowerCast(node);
             break;
 
-#if defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         case GT_ARR_BOUNDS_CHECK:
 #ifdef FEATURE_SIMD
         case GT_SIMD_CHK:
@@ -231,7 +231,7 @@ GenTree* Lowering::LowerNode(GenTree* node)
         case GT_LSH:
         case GT_RSH:
         case GT_RSZ:
-#if defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
             LowerShift(node->AsOp());
 #else
             ContainCheckShiftRotate(node->AsOp());
@@ -313,7 +313,7 @@ GenTree* Lowering::LowerNode(GenTree* node)
             break;
         }
 
-#if defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         case GT_CMPXCHG:
             CheckImmedAndMakeContained(node, node->AsCmpXchg()->gtOpComparand);
             break;
@@ -337,7 +337,7 @@ GenTree* Lowering::LowerNode(GenTree* node)
             break;
 #endif
 
-#ifndef _TARGET_ARMARCH_
+#if !defined(_TARGET_ARMARCH_) && !defined(_TARGET_MIPS64_)
         // TODO-ARMARCH-CQ: We should contain this as long as the offset fits.
         case GT_OBJ:
             if (node->AsObj()->Addr()->OperIsLocalAddr())
@@ -1013,7 +1013,7 @@ GenTree* Lowering::NewPutArg(GenTreeCall* call, GenTree* arg, fgArgTabEntry* inf
     bool isOnStack = true;
     isOnStack      = info->regNum == REG_STK;
 
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
     // Mark contained when we pass struct
     // GT_FIELD_LIST is always marked contained when it is generated
     if (type == TYP_STRUCT)
@@ -1075,12 +1075,16 @@ GenTree* Lowering::NewPutArg(GenTreeCall* call, GenTree* arg, fgArgTabEntry* inf
             // Set type of registers
             for (unsigned index = 0; index < info->numRegs; index++)
             {
+#ifdef _TARGET_MIPS64_
+                var_types regType = info->structDesc.eightByteClassifications[index] == MIPS64ClassificationTypeDouble ? TYP_DOUBLE : TYP_I_IMPL;
+#else // !_TARGET_MIPS64_
                 var_types regType = comp->getJitGCType(gcLayout[index]);
                 // Account for the possibility that float fields may be passed in integer registers.
                 if (varTypeIsFloating(regType) && !genIsValidFloatReg(argSplit->GetRegNumByIdx(index)))
                 {
                     regType = (regType == TYP_FLOAT) ? TYP_INT : TYP_LONG;
                 }
+#endif // !_TARGET_MIPS64_
                 argSplit->m_regType[index] = regType;
             }
         }
@@ -1091,10 +1095,12 @@ GenTree* Lowering::NewPutArg(GenTreeCall* call, GenTree* arg, fgArgTabEntry* inf
             {
                 var_types regType = fieldListPtr->gtGetOp1()->TypeGet();
                 // Account for the possibility that float fields may be passed in integer registers.
+#ifndef _TARGET_MIPS64_
                 if (varTypeIsFloating(regType) && !genIsValidFloatReg(argSplit->GetRegNumByIdx(index)))
                 {
                     regType = (regType == TYP_FLOAT) ? TYP_INT : TYP_LONG;
                 }
+#endif // !_TARGET_MIPS64_
                 argSplit->m_regType[index] = regType;
 
                 // Clear the register assignments on the fieldList nodes, as these are contained.
@@ -1391,7 +1397,7 @@ void Lowering::LowerArg(GenTreeCall* call, GenTree** ppArg)
 #endif // !defined(_TARGET_64BIT_)
     {
 
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
         if (call->IsVarargs() || comp->opts.compUseSoftFP)
         {
             // For vararg call or on armel, reg args should be all integer.
@@ -1416,7 +1422,7 @@ void Lowering::LowerArg(GenTreeCall* call, GenTree** ppArg)
     }
 }
 
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
 //------------------------------------------------------------------------
 // LowerFloatArg: Lower float call arguments on the arm platform.
 //
@@ -2556,7 +2562,8 @@ GenTree* Lowering::OptimizeConstCompare(GenTree* cmp)
 {
     assert(cmp->gtGetOp2()->IsIntegralConst());
 
-#if defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_)// || defined(_TARGET_MIPS64_)
+// should confirm how optimize on mips64.
     GenTree*       op1      = cmp->gtGetOp1();
     GenTreeIntCon* op2      = cmp->gtGetOp2()->AsIntCon();
     ssize_t        op2Value = op2->IconValue();
@@ -2596,6 +2603,7 @@ GenTree* Lowering::OptimizeConstCompare(GenTree* cmp)
             //
             bool removeCast =
 #ifdef _TARGET_ARM64_
+// should confirm how optimize on mips64.
                 (op2Value == 0) && cmp->OperIs(GT_EQ, GT_NE, GT_GT) &&
 #endif
                 (castOp->OperIs(GT_CALL, GT_LCL_VAR) || castOp->OperIsLogical()
@@ -2609,6 +2617,7 @@ GenTree* Lowering::OptimizeConstCompare(GenTree* cmp)
                 assert(!castOp->gtOverflowEx()); // Must not be an overflow checking operation
 
 #ifdef _TARGET_ARM64_
+// should confirm how optimize on mips64.
                 bool cmpEq = cmp->OperIs(GT_EQ);
 
                 cmp->SetOperRaw(cmpEq ? GT_TEST_EQ : GT_TEST_NE);
@@ -2774,6 +2783,7 @@ GenTree* Lowering::OptimizeConstCompare(GenTree* cmp)
 #ifdef _TARGET_XARCH_
             op1->OperIs(GT_AND, GT_OR, GT_XOR, GT_ADD, GT_SUB, GT_NEG))
 #else // _TARGET_ARM64_
+// should confirm how optimize on mips64.
             op1->OperIs(GT_AND, GT_ADD, GT_SUB))
 #endif
         {
@@ -2888,7 +2898,7 @@ GenTree* Lowering::LowerCompare(GenTree* cmp)
 //
 GenTree* Lowering::LowerJTrue(GenTreeOp* jtrue)
 {
-#ifdef _TARGET_ARM64_
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     GenTree* relop    = jtrue->gtGetOp1();
     GenTree* relopOp2 = relop->gtOp.gtGetOp2();
 
@@ -2903,12 +2913,14 @@ GenTree* Lowering::LowerJTrue(GenTreeOp* jtrue)
             flags   = relop->OperIs(GT_EQ) ? GTF_JCMP_EQ : 0;
             useJCMP = true;
         }
+#ifndef _TARGET_MIPS64_
         else if (relop->OperIs(GT_TEST_EQ, GT_TEST_NE) && isPow2(relopOp2->AsIntCon()->IconValue()))
         {
             // Codegen will use tbz or tbnz in codegen which do not affect the flag register
             flags   = GTF_JCMP_TST | (relop->OperIs(GT_TEST_EQ) ? GTF_JCMP_EQ : 0);
             useJCMP = true;
         }
+#endif // !_TARGET_MIPS64_
 
         if (useJCMP)
         {
@@ -2925,7 +2937,7 @@ GenTree* Lowering::LowerJTrue(GenTreeOp* jtrue)
             return nullptr;
         }
     }
-#endif // _TARGET_ARM64_
+#endif // _TARGET_ARM64_ || _TARGET_MIPS64_
 
     ContainCheckJTrue(jtrue);
 
@@ -3231,13 +3243,13 @@ GenTree* Lowering::CreateReturnTrapSeq()
     GenTree* testTree;
     if (addrOfCaptureThreadGlobal != nullptr)
     {
-        testTree = Ind(AddrGen(addrOfCaptureThreadGlobal));
+        testTree = AddrGen(addrOfCaptureThreadGlobal);
     }
     else
     {
-        testTree = Ind(Ind(AddrGen(pAddrOfCaptureThreadGlobal)));
+        testTree = Ind(AddrGen(pAddrOfCaptureThreadGlobal));
     }
-    return comp->gtNewOperNode(GT_RETURNTRAP, TYP_INT, testTree);
+    return comp->gtNewOperNode(GT_RETURNTRAP, TYP_INT, Ind(testTree, TYP_INT));
 }
 
 //------------------------------------------------------------------------
@@ -4392,7 +4404,7 @@ GenTree* Lowering::TryCreateAddrMode(LIR::Use&& use, bool isIndir)
 //
 GenTree* Lowering::LowerAdd(GenTree* node)
 {
-#ifndef _TARGET_ARMARCH_
+#if !defined(_TARGET_ARMARCH_) && !defined(_TARGET_MIPS64_)
     if (varTypeIsIntegralOrI(node))
     {
         LIR::Use use;
@@ -4443,6 +4455,7 @@ bool Lowering::LowerUnsignedDivOrMod(GenTreeOp* divMod)
     assert(varTypeIsFloating(divMod->TypeGet()));
 #endif // USE_HELPERS_FOR_INT_DIV
 #if defined(_TARGET_ARM64_)
+// should confirm on mips64.
     assert(divMod->OperGet() != GT_UMOD);
 #endif // _TARGET_ARM64_
 
@@ -4523,7 +4536,7 @@ bool Lowering::LowerUnsignedDivOrMod(GenTreeOp* divMod)
     }
 
 // TODO-ARM-CQ: Currently there's no GT_MULHI for ARM32
-#if defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     if (!comp->opts.MinOpts() && (divisorValue >= 3))
     {
         size_t magic;
@@ -4646,6 +4659,7 @@ GenTree* Lowering::LowerConstIntDivOrMod(GenTree* node)
     assert(!"unreachable: integral GT_DIV/GT_MOD should get morphed into helper calls");
 #endif // USE_HELPERS_FOR_INT_DIV
 #if defined(_TARGET_ARM64_)
+// should confirm on mips64.
     assert(node->OperGet() != GT_MOD);
 #endif // _TARGET_ARM64_
 
@@ -4701,7 +4715,11 @@ GenTree* Lowering::LowerConstIntDivOrMod(GenTree* node)
             return nullptr;
         }
 
-#if defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_XARCH_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
+#if defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+#pragma  message("Unimplemented yet MIPS64")
+#endif
         ssize_t magic;
         int     shift;
 

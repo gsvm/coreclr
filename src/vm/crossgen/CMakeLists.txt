@@ -223,6 +223,10 @@ elseif(CLR_CMAKE_TARGET_ARCH_ARM64)
   list(APPEND VM_CROSSGEN_SOURCES
     ../${ARCH_SOURCES_DIR}/stubs.cpp
   )
+elseif(CLR_CMAKE_TARGET_ARCH_MIPS64)
+  list(APPEND VM_CROSSGEN_SOURCES
+    ../${ARCH_SOURCES_DIR}/stubs.cpp
+  )
 else()
   clr_unknown_arch()
 endif()

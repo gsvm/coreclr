@@ -104,6 +104,10 @@ namespace System.Reflection
                 {
                     return ProcessorArchitecture.Arm;
                 }
+                if (ifm == ImageFileMachine.MIPS64)
+                {
+                    return ProcessorArchitecture.Mips64;
+                }
             }
             return ProcessorArchitecture.None;
         }

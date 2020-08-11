@@ -567,6 +567,132 @@ bool Compiler::isSingleFloat32Struct(CORINFO_CLASS_HANDLE clsHnd)
 }
 #endif // ARM_SOFTFP
 
+#ifdef _TARGET_MIPS64_
+//---------------------------------------------------------------------------
+// IsSingleFloat32Struct:
+//    Check if the given struct type contains only one float32 value type
+//
+// Arguments:
+//    clsHnd     - the handle for the struct type
+//
+// Return Value:
+//    true if the given struct type contains only one float32 value type,
+//    false otherwise.
+//
+
+bool Compiler::isSingleFloat32Struct(CORINFO_CLASS_HANDLE clsHnd)
+{
+    // all of class chain must be of value type and must have only one field
+    if (!info.compCompHnd->isValueClass(clsHnd) || info.compCompHnd->getClassNumInstanceFields(clsHnd) != 1)
+    {
+        return false;
+    }
+
+    CORINFO_CLASS_HANDLE* pClsHnd   = &clsHnd;
+    CORINFO_FIELD_HANDLE  fldHnd    = info.compCompHnd->getFieldInClass(clsHnd, 0);
+    CorInfoType           fieldType = info.compCompHnd->getFieldType(fldHnd, pClsHnd);
+
+    switch (fieldType)
+    {
+        case CORINFO_TYPE_FLOAT:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+//---------------------------------------------------------------------------
+// IsTwoFloatStruct:
+//    Check if the given struct type contains only two float value type
+//
+// Arguments:
+//    clsHnd     - the handle for the struct type
+//
+// Return Value:
+//    true if the given struct type contains only two float value type,
+//    false otherwise.
+//
+
+bool Compiler::isTwoFloatStruct(CORINFO_CLASS_HANDLE clsHnd)
+{
+    // all of class chain must be of value type and must have only two field
+    if (!info.compCompHnd->isValueClass(clsHnd) || info.compCompHnd->getClassNumInstanceFields(clsHnd) != 2)
+    {
+        return false;
+    }
+
+    CORINFO_CLASS_HANDLE  ClsHnd0   = clsHnd;
+    CORINFO_CLASS_HANDLE  ClsHnd1   = clsHnd;
+    CORINFO_FIELD_HANDLE  fldHnd    = info.compCompHnd->getFieldInClass(ClsHnd0, 0);
+    CorInfoType           fieldType = info.compCompHnd->getFieldType(fldHnd, &ClsHnd0);
+
+    if (fieldType == CORINFO_TYPE_FLOAT)
+    {
+        fldHnd    = info.compCompHnd->getFieldInClass(ClsHnd1, 1);
+        fieldType = info.compCompHnd->getFieldType(fldHnd, &ClsHnd1);
+
+        switch (fieldType)
+        {
+            case CORINFO_TYPE_FLOAT:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+}
+
+//---------------------------------------------------------------------------
+// IsTwoDoubleStruct:
+//    Check if the given struct type contains only two double value type
+//
+// Arguments:
+//    clsHnd     - the handle for the struct type
+//
+// Return Value:
+//    true if the given struct type contains only two double value type,
+//    false otherwise.
+//
+
+bool Compiler::isTwoDoubleStruct(CORINFO_CLASS_HANDLE clsHnd)
+{
+    // all of class chain must be of value type and must have only two field
+    if (!info.compCompHnd->isValueClass(clsHnd) || info.compCompHnd->getClassNumInstanceFields(clsHnd) != 2)
+    {
+        return false;
+    }
+
+    CORINFO_CLASS_HANDLE  ClsHnd0   = clsHnd;
+    CORINFO_CLASS_HANDLE  ClsHnd1   = clsHnd;
+    CORINFO_FIELD_HANDLE  fldHnd    = info.compCompHnd->getFieldInClass(ClsHnd0, 0);
+    CorInfoType           fieldType = info.compCompHnd->getFieldType(fldHnd, &ClsHnd0);
+
+    if (fieldType == CORINFO_TYPE_DOUBLE)
+    {
+        fldHnd    = info.compCompHnd->getFieldInClass(ClsHnd1, 1);
+        fieldType = info.compCompHnd->getFieldType(fldHnd, &ClsHnd1);
+
+        switch (fieldType)
+        {
+            case CORINFO_TYPE_DOUBLE:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+}
+#endif // _TARGET_MIPS64_
+
 //-----------------------------------------------------------------------------
 // getPrimitiveTypeForStruct:
 //     Get the "primitive" type that is is used for a struct
@@ -613,7 +739,7 @@ var_types Compiler::getPrimitiveTypeForStruct(unsigned structSize, CORINFO_CLASS
         {
             case 4:
             case 8:
-#ifdef _TARGET_ARM64_
+#if defined(_TARGET_ARM64_)
             case 16:
 #endif // _TARGET_ARM64_
             {
@@ -673,14 +799,14 @@ var_types Compiler::getPrimitiveTypeForStruct(unsigned structSize, CORINFO_CLASS
             useType = TYP_INT;
             break;
 
-#if !defined(_TARGET_XARCH_) || defined(UNIX_AMD64_ABI)
+#if !defined(_TARGET_XARCH_) || defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
         case 5:
         case 6:
         case 7:
             useType = TYP_I_IMPL;
             break;
 
-#endif // !_TARGET_XARCH_ || UNIX_AMD64_ABI
+#endif // !_TARGET_XARCH_ || UNIX_AMD64_ABI || _TARGET_MIPS64_
 #endif // _TARGET_64BIT_
 
         case TARGET_POINTER_SIZE:
@@ -772,6 +898,28 @@ var_types Compiler::getArgTypeForStruct(CORINFO_CLASS_HANDLE clsHnd,
     }
     else
 #endif // UNIX_AMD64_ABI
+#ifdef _TARGET_MIPS64_
+
+    // An 8-byte struct may need to be passed in a floating point register
+    // So we always consult the struct "Classifier" routine
+    //
+    MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR structDesc;
+    eeGetMIPS64PassStructInRegisterDescriptor(clsHnd, &structDesc);
+
+    if (structDesc.eightByteCount != 1)
+    {
+        // We can't pass this as a primitive type.
+    }
+    else if (structDesc.eightByteClassifications[0] == MIPS64ClassificationTypeDouble)
+    {
+        // If this is passed as a floating type, use that.
+        // Otherwise, we'll use the general case - we don't want to use the "EightByteType"
+        // directly, because it returns `TYP_INT` for any integral type <= 4 bytes, and
+        // we need to preserve small types.
+        useType = TYP_DOUBLE;
+    }
+    else
+#endif // _TARGET_MIPS64_
 
         // The largest arg passed in a single register is MAX_PASS_SINGLEREG_BYTES,
         // so we can skip calling getPrimitiveTypeForStruct when we
@@ -877,6 +1025,25 @@ var_types Compiler::getArgTypeForStruct(CORINFO_CLASS_HANDLE clsHnd,
                 howToPassStruct = SPK_ByValue;
                 useType         = TYP_STRUCT;
 
+#elif defined(_TARGET_MIPS64_)
+                // The case of (structDesc.eightByteCount == 1) should have already been handled
+                if (structDesc.eightByteCount > 1)
+                {
+                    // setup wbPassType and useType indicate that this is passed by value in multiple registers
+                    //  (when all of the parameters registers are used, then the stack will be used)
+                    howToPassStruct = SPK_ByValue;
+                    useType         = TYP_STRUCT;
+                }
+                else
+                {
+                    assert(structDesc.eightByteCount == 0);
+                    // Otherwise we pass this struct by reference to a copy
+                    // setup wbPassType and useType indicate that this is passed using one register
+                    //  (by reference to a copy)
+                    howToPassStruct = SPK_ByReference;
+                    useType         = TYP_UNKNOWN;
+                }
+
 #else //  _TARGET_XXX_
 
                 noway_assert(!"Unhandled TARGET in getArgTypeForStruct (with FEATURE_MULTIREG_ARGS=1)");
@@ -890,7 +1057,7 @@ var_types Compiler::getArgTypeForStruct(CORINFO_CLASS_HANDLE clsHnd,
             // and can't be passed in multiple registers
             CLANG_FORMAT_COMMENT_ANCHOR;
 
-#if defined(_TARGET_X86_) || defined(_TARGET_ARM_) || defined(UNIX_AMD64_ABI)
+#if defined(_TARGET_X86_) || defined(_TARGET_ARM_) || defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
 
             // Otherwise we pass this struct by value on the stack
             // setup wbPassType and useType indicate that this is passed by value according to the X86/ARM32 ABI
@@ -1008,6 +1175,38 @@ var_types Compiler::getReturnTypeForStruct(CORINFO_CLASS_HANDLE clsHnd,
     }
 
 #endif // UNIX_AMD64_ABI
+
+#ifdef _TARGET_MIPS64_
+    // An 8-byte struct may need to be returned in a floating point register
+    // So we always consult the struct "Classifier" routine
+    //
+    MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR structDesc;
+    eeGetMIPS64PassStructInRegisterDescriptor(clsHnd, &structDesc);
+
+    if (structDesc.eightByteCount == 1)
+    {
+        assert(structSize <= sizeof(double));
+
+        if (structDesc.eightByteClassifications[0] == MIPS64ClassificationTypeDouble)
+        {
+            // If this is returned as a floating type, use that.
+            // Otherwise, leave as TYP_UNKONWN and we'll sort things out below.
+            useType           = TYP_DOUBLE;
+            howToReturnStruct = SPK_PrimitiveType;
+        }
+        else if (isSingleFloat32Struct(clsHnd))
+        {
+            useType           = TYP_FLOAT;
+            howToReturnStruct = SPK_PrimitiveType;
+        }
+        else if (isTwoFloatStruct(clsHnd))
+        {
+            howToReturnStruct = SPK_ByValue;
+            useType           = TYP_STRUCT;
+        }
+    }
+
+#endif // _TARGET_MIPS64_
 
     // Check for cases where a small struct is returned in a register
     // via a primitive type.
@@ -1134,6 +1333,18 @@ var_types Compiler::getReturnTypeForStruct(CORINFO_CLASS_HANDLE clsHnd,
                 //  (reference to a return buffer)
                 howToReturnStruct = SPK_ByReference;
                 useType           = TYP_UNKNOWN;
+
+#elif defined(_TARGET_MIPS64_)
+
+                // Structs that are pointer sized or smaller should have been handled by getPrimitiveTypeForStruct
+                assert(structSize > TARGET_POINTER_SIZE);
+
+                // On MIPS64 structs that are 9-16 bytes are returned by value in multiple registers
+                assert(structSize <= (TARGET_POINTER_SIZE * 2));
+
+                // setup wbPassType and useType indicate that this is return by value in multiple registers
+                howToReturnStruct = SPK_ByValue;
+                useType           = TYP_STRUCT;
 
 #else //  _TARGET_XXX_
 
@@ -2212,6 +2423,8 @@ void Compiler::compSetProcessor()
     info.genCPU       = CPU_ARM64;
 #elif defined(_TARGET_AMD64_)
     info.genCPU                   = CPU_X64;
+#elif defined(_TARGET_MIPS64_)
+    info.genCPU       = CPU_MIPS64;
 #elif defined(_TARGET_X86_)
     if (jitFlags.IsSet(JitFlags::JIT_FLAG_TARGET_P4))
         info.genCPU = CPU_X86_PENTIUM_4;
@@ -3099,6 +3312,11 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
     opts.compJitSaveFpLrWithCalleeSavedRegisters = 0;
 #endif // defined(_TARGET_ARM64_)
 
+#if defined(_TARGET_MIPS64_)
+    // 0 is default: use the appropriate frame type based on the function.
+    opts.compJitSaveFpRaWithCalleeSavedRegisters = 0;
+#endif // defined(_TARGET_MIPS64_)
+
 #ifdef DEBUG
     opts.dspInstrs       = false;
     opts.dspEmit         = false;
@@ -3584,6 +3802,13 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
         opts.compJitSaveFpLrWithCalleeSavedRegisters = JitConfig.JitSaveFpLrWithCalleeSavedRegisters();
     }
 #endif // defined(DEBUG) && defined(_TARGET_ARM64_)
+
+#if defined(DEBUG) && defined(_TARGET_MIPS64_)
+    if ((s_pJitMethodSet == nullptr) || s_pJitMethodSet->IsActiveMethod(info.compFullName, info.compMethodHash()))
+    {
+        opts.compJitSaveFpRaWithCalleeSavedRegisters = JitConfig.JitSaveFpRaWithCalleeSavedRegisters();
+    }
+#endif // defined(DEBUG) && defined(_TARGET_MIPS64_)
 }
 
 #ifdef DEBUG
@@ -4112,7 +4337,7 @@ _SetMinOpts:
     fgCanRelocateEHRegions = true;
 }
 
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
 // Function compRsvdRegCheck:
 //  given a curState to use for calculating the total frame size
 //  it will return true if the REG_OPT_RSVD should be reserved so
@@ -4156,6 +4381,10 @@ bool Compiler::compRsvdRegCheck(FrameLayoutState curState)
     // TODO-ARM64-CQ: update this!
     JITDUMP(" Returning true (ARM64)\n\n");
     return true; // just always assume we'll need it, for now
+
+#elif defined(_TARGET_MIPS64_)
+
+    return true;
 
 #else  // _TARGET_ARM_
 

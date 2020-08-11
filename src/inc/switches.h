@@ -60,7 +60,8 @@
 #if defined(_TARGET_X86_) || defined(_TARGET_ARM_)
     #define USE_UPPER_ADDRESS       0
 
-#elif defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
     #define UPPER_ADDRESS_MAPPING_FACTOR 2
     #define CLR_UPPER_ADDRESS_MIN   0x64400000000
     #define CODEHEAP_START_ADDRESS  0x64480000000
@@ -165,7 +166,8 @@
 // do not work reliably with conservative GC.
 #define FEATURE_CONSERVATIVE_GC 1
 
-#if (defined(_TARGET_ARM_) && !defined(ARM_SOFTFP)) || defined(_TARGET_ARM64_)
+#if (defined(_TARGET_ARM_) && !defined(ARM_SOFTFP)) || defined(_TARGET_ARM64_)// || defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
 #define FEATURE_HFA
 #endif
 

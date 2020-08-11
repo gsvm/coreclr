@@ -456,6 +456,10 @@ Exit:
         {
             SetArchitecture(peARM64);
         }
+        else if (EqualsCaseInsensitive(architecture, g_BinderVariables->architectureMIPS64))
+        {
+            SetArchitecture(peMIPS64);
+        }
         else
         {
             hr = FUSION_E_MANIFEST_PARSE_ERROR;
@@ -693,6 +697,8 @@ Exit:
                 return g_BinderVariables->architectureARM;
             case peARM64:
                 return g_BinderVariables->architectureARM64;
+            case peMIPS64:
+                return g_BinderVariables->architectureMIPS64;
             default:
                 _ASSERTE(0);
                 return g_BinderVariables->emptyString;

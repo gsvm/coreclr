@@ -89,6 +89,9 @@ DumpDataTarget::GetMachineType(
     *machine = IMAGE_FILE_MACHINE_ARM64;
 #elif _X86_
     *machine = IMAGE_FILE_MACHINE_I386;
+#elif defined(__mips64__)
+////FIXME for MIPS.
+    *machine = IMAGE_FILE_MACHINE_MIPS64;
 #else
 #error Unsupported architecture
 #endif
@@ -99,7 +102,7 @@ HRESULT STDMETHODCALLTYPE
 DumpDataTarget::GetPointerSize(
     /* [out] */ ULONG32 *size)
 {
-#if defined(_AMD64_) || defined(_ARM64_)
+#if defined(_AMD64_) || defined(_ARM64_) || defined(_MIPS64_)
     *size = 8;
 #elif defined(_ARM_) || defined(_X86_)
     *size = 4;

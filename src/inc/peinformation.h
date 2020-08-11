@@ -22,6 +22,7 @@ typedef enum _tagPEKIND
     peAMD64     = 0x00000004,
     peARM       = 0x00000005,
     peARM64     = 0x00000006,
+    peMIPS64    = 0x00000007,
     peInvalid = 0xffffffff
 } PEKIND;
 
@@ -30,7 +31,7 @@ typedef enum _tagPEKIND
 
 inline bool IsPE64(PEKIND x)
 {
-    return ( (x == peIA64) || (x == peAMD64) || (x == peARM64) );
+    return ( (x == peIA64) || (x == peAMD64) || (x == peARM64) || (x == peMIPS64));
 }
 
 inline bool IsPE32(PEKIND x)
@@ -57,6 +58,8 @@ inline PEKIND TargetNativePEKIND() { return peAMD64; }
 inline PEKIND TargetNativePEKIND() { return peARM; }
 #elif defined(_TARGET_ARM64_)
 inline PEKIND TargetNativePEKIND() { return peARM64; }
+#elif defined(_TARGET_MIPS64_)
+inline PEKIND TargetNativePEKIND() { return peMIPS64; }
 #else
 #error Need to define valid TargetNativePEKIND()
 #endif

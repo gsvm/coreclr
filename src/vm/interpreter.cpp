@@ -91,7 +91,8 @@ InterpreterMethodInfo::InterpreterMethodInfo(CEEInfo* comp, CORINFO_METHOD_INFO*
         hasRetBuff = false;
     }
 #endif
-#if defined(_ARM_) || defined(_AMD64_)|| defined(_ARM64_)
+#if defined(_ARM_) || defined(_AMD64_)|| defined(_ARM64_) || defined(_MIPS64_)
+////FIXME for MIPS.
     // ...or it fits into one register.
     if (hasRetBuff && getClassSize(methInfo->args.retTypeClass) <= sizeof(void*))
     {
@@ -523,6 +524,9 @@ void Interpreter::ArgState::AddArg(unsigned canonIndex, short numSlots, bool noR
         // On ARM, args are pushed in *reverse* order.  So we will create an offset relative to the address
         // of the first stack arg; later, we will add the size of the non-stack arguments.
         ClrSafeInt<short> offset(callerArgStackSlots);
+#elif defined(_MIPS64_)
+        callerArgStackSlots += numSlots;
+        ClrSafeInt<short> offset(-callerArgStackSlots);
 #endif
         offset *= static_cast<short>(sizeof(void*));
         assert(!offset.IsOverflow());
@@ -631,6 +635,19 @@ void Interpreter::ArgState::AddFPArg(unsigned canonIndex, unsigned short numSlot
         }
     }
 #elif defined(_ARM64_)
+
+    assert(numFPRegArgSlots + numSlots <= MaxNumFPRegArgSlots);
+    assert(!twoSlotAlign);
+    argIsReg[canonIndex] = ARS_FloatReg;
+
+    argOffsets[canonIndex] = numFPRegArgSlots * sizeof(void*);
+    for (unsigned i = 0; i < numSlots; i++)
+    {
+        fpArgsUsed |= (0x1 << (numFPRegArgSlots + i));
+    }
+    numFPRegArgSlots += numSlots;
+
+#elif defined(_MIPS64_)
 
     assert(numFPRegArgSlots + numSlots <= MaxNumFPRegArgSlots);
     assert(!twoSlotAlign);
@@ -840,6 +857,10 @@ CorJitResult Interpreter::GenerateInterpreterStub(CEEInfo* comp,
         // x8 through x15 are scratch registers on ARM64. 
         IntReg x8 = IntReg(8);
         IntReg x9 = IntReg(9);
+#elif defined(_MIPS64_)
+        // t8 and t9 are scratch registers on MIPS64.
+        IntReg t8 = IntReg(24);
+        IntReg t9 = IntReg(25);
 #else
 #error unsupported platform
 #endif
@@ -944,7 +965,8 @@ CorJitResult Interpreter::GenerateInterpreterStub(CEEInfo* comp,
 #endif
 
 #if defined(FEATURE_HFA)
-#if defined(_ARM_) || defined(_ARM64_)
+#if defined(_ARM_) || defined(_ARM64_) || defined(_MIPS64_)
+////FIXME for MIPS.
     // On ARM, a non-retBuffArg method that returns a struct type might be an HFA return.  Figure
     // that out.
     unsigned HFARetTypeSize = 0;
@@ -1068,7 +1090,7 @@ CorJitResult Interpreter::GenerateInterpreterStub(CEEInfo* comp,
 #elif defined(_ARM_)
                     // LONGS have 2-reg alignment; inc reg if necessary.
                     argState.AddArg(k, 2, /*noReg*/false, /*twoSlotAlign*/true);
-#elif defined(_AMD64_) || defined(_ARM64_)
+#elif defined(_AMD64_) || defined(_ARM64_) || defined(_MIPS64_)
                     argState.AddArg(k);
 #else
 #error unknown platform
@@ -1081,7 +1103,7 @@ CorJitResult Interpreter::GenerateInterpreterStub(CEEInfo* comp,
                     argState.AddArg(k, 1, /*noReg*/true);
 #elif defined(_ARM_)
                     argState.AddFPArg(k, 1, /*twoSlotAlign*/false);
-#elif defined(_AMD64_) || defined(_ARM64_)
+#elif defined(_AMD64_) || defined(_ARM64_) || defined(_MIPS64_)
                     argState.AddFPArg(k, 1, false);
 #else
 #error unknown platform
@@ -1094,7 +1116,7 @@ CorJitResult Interpreter::GenerateInterpreterStub(CEEInfo* comp,
                     argState.AddArg(k, 2, /*noReg*/true);
 #elif defined(_ARM_)
                     argState.AddFPArg(k, 2, /*twoSlotAlign*/true);
-#elif defined(_AMD64_) || defined(_ARM64_)
+#elif defined(_AMD64_) || defined(_ARM64_) || defined(_MIPS64_)
                     argState.AddFPArg(k, 1, false);
 #else
 #error unknown platform
@@ -1134,6 +1156,8 @@ CorJitResult Interpreter::GenerateInterpreterStub(CEEInfo* comp,
 #endif
                                     );
                         }
+#elif defined(_MIPS64_)
+                        argState.AddArg(k, static_cast<short>(szSlots));
 #else
 #error unknown platform
 #endif
@@ -1178,11 +1202,16 @@ CorJitResult Interpreter::GenerateInterpreterStub(CEEInfo* comp,
             unsigned short stackArgBaseOffset = intRegArgBaseOffset + (argState.numRegArgs) * sizeof(void*);
 #elif defined(_ARM64_)
 
-            // See StubLinkerCPU::EmitProlog for the layout of the stack 
+            // See StubLinkerCPU::EmitProlog for the layout of the stack
             unsigned       intRegArgBaseOffset = (argState.numFPRegArgSlots) * sizeof(void*);
             unsigned short stackArgBaseOffset = (unsigned short) ((argState.numRegArgs + argState.numFPRegArgSlots) * sizeof(void*));
 #elif defined(_AMD64_)
             unsigned short stackArgBaseOffset = (argState.numRegArgs) * sizeof(void*);
+#elif defined(_MIPS64_)
+
+            // See StubLinkerCPU::EmitProlog for the layout of the stack
+            unsigned       intRegArgBaseOffset = (argState.numFPRegArgSlots) * sizeof(void*);
+            unsigned short stackArgBaseOffset = (unsigned short) ((argState.numRegArgs + argState.numFPRegArgSlots) * sizeof(void*));
 #else
 #error unsupported platform
 #endif
@@ -1231,6 +1260,8 @@ CorJitResult Interpreter::GenerateInterpreterStub(CEEInfo* comp,
                     X86Reg argRegs[] = { kECX, kEDX, kR8, kR9 };
                     if (!jmpCall) { sl.X86EmitIndexRegStoreRSP(regArgsFound * sizeof(void*), argRegs[regArgsFound - 1]); }
                     argState.argOffsets[k] = (regArgsFound - 1) * sizeof(void*);
+#elif defined(_MIPS64_)
+                    argState.argOffsets[k] += intRegArgBaseOffset;
 #else
 #error unsupported platform
 #endif
@@ -1480,6 +1511,8 @@ CorJitResult Interpreter::GenerateInterpreterStub(CEEInfo* comp,
 
         sl.EmitEpilog();
         
+#elif defined(_MIPS64_)
+        assert(!"unimplemented on MIPS yet");
 
 #else
 #error unsupported platform
@@ -6146,6 +6179,9 @@ void Interpreter::MkRefany()
 #elif defined(_ARM64_)
     tbr = NULL;
     NYI_INTERP("Unimplemented code: MkRefAny");
+#elif defined(_MIPS64_)
+    tbr = NULL;
+    NYI_INTERP("Unimplemented code: MkRefAny on MIPS");
 #else
 #error "unsupported platform"
 #endif
@@ -9256,6 +9292,8 @@ void Interpreter::DoCallWork(bool virtualCall, void* thisArg, CORINFO_RESOLVED_T
     // ARM64TODO: Verify that the following statement is correct for ARM64.
     unsigned totalArgSlots = nSlots + HFAReturnArgSlots;
 #elif defined(_AMD64_)
+    unsigned totalArgSlots = nSlots;
+#elif defined(_MIPS64_)
     unsigned totalArgSlots = nSlots;
 #else
 #error "unsupported platform"

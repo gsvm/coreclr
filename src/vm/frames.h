@@ -1893,7 +1893,7 @@ public:
     static BYTE GetOffsetOfArgs()
     {
         LIMITED_METHOD_DAC_CONTRACT;
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         size_t ofs = offsetof(UnmanagedToManagedFrame, m_argumentRegisters);
 #else
         size_t ofs = sizeof(UnmanagedToManagedFrame);
@@ -1959,6 +1959,10 @@ protected:
     TADDR           m_fp;
     TADDR           m_ReturnAddress;
     TADDR           m_x8; // ret buff arg
+    ArgumentRegisters m_argumentRegisters;
+#elif defined (_TARGET_MIPS64_)
+    TADDR           m_fp;
+    TADDR           m_ReturnAddress;
     ArgumentRegisters m_argumentRegisters;
 #else
     TADDR           m_ReturnAddress;  // return address into unmanaged code

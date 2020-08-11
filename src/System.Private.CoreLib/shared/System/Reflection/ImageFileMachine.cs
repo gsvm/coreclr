@@ -10,6 +10,7 @@ namespace System.Reflection
         IA64 = 0x0200,
         AMD64 = 0x8664,
         ARM = 0x01c4,
+        MIPS64 = 0xdd64,
     }
 }
 

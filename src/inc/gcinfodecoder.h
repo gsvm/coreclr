@@ -76,6 +76,8 @@ inline TADDR GetSP(T_CONTEXT* context)
     return (TADDR)context->Sp;
 #elif defined(_TARGET_ARM64_)
     return (TADDR)context->Sp;
+#elif defined(_TARGET_MIPS64_)
+    return (TADDR)context->Sp;
 #else
     _ASSERTE(!"nyi for platform");
 #endif
@@ -88,6 +90,8 @@ inline PCODE GetIP(T_CONTEXT* context)
 #elif defined(_TARGET_ARM_)
     return (PCODE)context->Pc;
 #elif defined(_TARGET_ARM64_)
+    return (PCODE)context->Pc;
+#elif defined(_TARGET_MIPS64_)
     return (PCODE)context->Pc;
 #else
     _ASSERTE(!"nyi for platform");
@@ -209,7 +213,7 @@ enum GcInfoDecoderFlags
     DECODE_EDIT_AND_CONTINUE     = 0x800,
     DECODE_REVERSE_PINVOKE_VAR   = 0x1000,
     DECODE_RETURN_KIND           = 0x2000,
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     DECODE_HAS_TAILCALLS         = 0x4000,
 #endif // _TARGET_ARM_ || _TARGET_ARM64_
 };
@@ -228,7 +232,7 @@ enum GcInfoHeaderFlags
     GC_INFO_HAS_STACK_BASE_REGISTER     = 0x40,
 #ifdef _TARGET_AMD64_
     GC_INFO_WANTS_REPORT_ONLY_LEAF      = 0x80,
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     GC_INFO_HAS_TAILCALLS               = 0x80,
 #endif // _TARGET_AMD64_
     GC_INFO_HAS_EDIT_AND_CONTINUE_PRESERVED_SLOTS = 0x100,
@@ -533,7 +537,7 @@ public:
     bool    HasMethodTableGenericsInstContext();
     bool    GetIsVarArg();
     bool    WantsReportOnlyLeaf();
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     bool    HasTailCalls();
 #endif // _TARGET_ARM_ || _TARGET_ARM64_
     ReturnKind GetReturnKind();
@@ -558,7 +562,7 @@ private:
     bool    m_GenericSecretParamIsMT;
 #ifdef _TARGET_AMD64_
     bool    m_WantsReportOnlyLeaf;
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     bool    m_HasTailCalls;
 #endif // _TARGET_AMD64_
     INT32   m_SecurityObjectStackSlot;

@@ -661,6 +661,8 @@ LinearScan::LinearScan(Compiler* theCompiler)
     enregisterLocalVars = ((compiler->opts.compFlags & CLFLG_REGVAR) != 0);
 #ifdef _TARGET_ARM64_
     availableIntRegs = (RBM_ALLINT & ~(RBM_PR | RBM_FP | RBM_LR) & ~compiler->codeGen->regSet.rsMaskResvd);
+#elif _TARGET_MIPS64_
+    availableIntRegs = (RBM_ALLINT & ~(/* FIXME: what is RBM_PR for MIPS? */RBM_FP | RBM_RA) & ~compiler->codeGen->regSet.rsMaskResvd);
 #else
     availableIntRegs = (RBM_ALLINT & ~compiler->codeGen->regSet.rsMaskResvd);
 #endif
@@ -2369,7 +2371,7 @@ void LinearScan::setFrameType()
 
     compiler->rpFrameType = frameType;
 
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
     // Determine whether we need to reserve a register for large lclVar offsets.
     if (compiler->compRsvdRegCheck(Compiler::REGALLOC_FRAME_LAYOUT))
     {
@@ -7793,7 +7795,7 @@ void LinearScan::handleOutgoingCriticalEdges(BasicBlock* block)
         switchRegs |= genRegMask(op2->gtRegNum);
     }
 
-#ifdef _TARGET_ARM64_
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     // Next, if this blocks ends with a JCMP, we have to make sure not to copy
     // into the register that it uses or modify the local variable it must consume
     LclVarDsc* jcmpLocalVarDsc = nullptr;
@@ -7889,7 +7891,7 @@ void LinearScan::handleOutgoingCriticalEdges(BasicBlock* block)
                 sameToReg = REG_NA;
             }
 
-#ifdef _TARGET_ARM64_
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
             if (jcmpLocalVarDsc && (jcmpLocalVarDsc->lvVarIndex == outResolutionSetVarIndex))
             {
                 sameToReg = REG_NA;

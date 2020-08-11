@@ -356,6 +356,150 @@ typedef struct _T_KNONVOLATILE_CONTEXT_POINTERS {
 
 } T_KNONVOLATILE_CONTEXT_POINTERS, *PT_KNONVOLATILE_CONTEXT_POINTERS;
 
+#elif defined(_AMD64_) && defined(_TARGET_MIPS64_)  // Host amd64 managing MIPS64 related code
+
+#ifndef CROSS_COMPILE
+#define CROSS_COMPILE
+#endif
+
+//
+// Specify the number of breakpoints and watchpoints that the OS
+// will track. Architecturally, MIPS64 supports up to 16. In practice,
+// however, almost no one implements more than 4 of each.
+//
+
+#define MIPS64_MAX_BREAKPOINTS     8
+#define MIPS64_MAX_WATCHPOINTS     2
+
+#define CONTEXT_UNWOUND_TO_CALL 0x20000000
+
+typedef struct DECLSPEC_ALIGN(16) _T_CONTEXT {
+
+    //
+    // Control flags.
+    //
+
+    /* +0x000 */ DWORD ContextFlags;
+
+    //
+    // Integer registers
+    //
+
+    DWORD64 R0;
+    DWORD64 At;
+    DWORD64 V0;
+    DWORD64 V1;
+    DWORD64 A0;
+    DWORD64 A1;
+    DWORD64 A2;
+    DWORD64 A3;
+    DWORD64 A4;
+    DWORD64 A5;
+    DWORD64 A6;
+    DWORD64 A7;
+    DWORD64 T0;
+    DWORD64 T1;
+    DWORD64 T2;
+    DWORD64 T3;
+    DWORD64 S0;
+    DWORD64 S1;
+    DWORD64 S2;
+    DWORD64 S3;
+    DWORD64 S4;
+    DWORD64 S5;
+    DWORD64 S6;
+    DWORD64 S7;
+    DWORD64 T8;
+    DWORD64 T9;
+    DWORD64 K0;
+    DWORD64 K1;
+    DWORD64 Gp;
+    DWORD64 Sp;
+    DWORD64 Fp;
+    DWORD64 Ra;
+    DWORD64 Pc;
+
+    //
+    // Floating Point Registers
+    //
+
+    DWORD64 F[32];
+    DWORD   Fcsr;
+
+    DWORD64 Hi;
+    DWORD64 Lo;
+} T_CONTEXT, *PT_CONTEXT;
+
+// _IMAGE_MIPS64_RUNTIME_FUNCTION_ENTRY (see ExternalAPIs\Win9CoreSystem\inc\winnt.h)
+typedef struct _T_RUNTIME_FUNCTION {
+    DWORD BeginAddress;
+    union {
+        DWORD UnwindData;
+        struct {
+            DWORD Flag : 2;
+            DWORD FunctionLength : 11;
+            DWORD RegF : 3;
+            DWORD RegI : 4;
+            DWORD H : 1;
+            DWORD CR : 2;
+            DWORD FrameSize : 9;
+        } PackedUnwindData;
+    };
+} T_RUNTIME_FUNCTION, *PT_RUNTIME_FUNCTION;
+
+
+//
+// Define exception dispatch context structure.
+//
+
+typedef struct _T_DISPATCHER_CONTEXT {
+    DWORD64 ControlPc;
+    DWORD64 ImageBase;
+    PT_RUNTIME_FUNCTION FunctionEntry;
+    DWORD64 EstablisherFrame;
+    DWORD64 TargetPc;
+    PCONTEXT ContextRecord;
+    PEXCEPTION_ROUTINE LanguageHandler;
+    PVOID HandlerData;
+    PUNWIND_HISTORY_TABLE HistoryTable;
+    DWORD ScopeIndex;
+    BOOLEAN ControlPcIsUnwound;
+    PBYTE  NonVolatileRegisters;
+} T_DISPATCHER_CONTEXT, *PT_DISPATCHER_CONTEXT;
+
+
+
+//
+// Nonvolatile context pointer record.
+//
+
+typedef struct _T_KNONVOLATILE_CONTEXT_POINTERS {
+
+    PDWORD64 S0;
+    PDWORD64 S1;
+    PDWORD64 S2;
+    PDWORD64 S3;
+    PDWORD64 S4;
+    PDWORD64 S5;
+    PDWORD64 S6;
+    PDWORD64 S7;
+    PDWORD64 Gp;
+    PDWORD64 Fp;
+    PDWORD64 Ra;
+
+    PDWORD64 F24;
+    PDWORD64 F25;
+    PDWORD64 F26;
+    PDWORD64 F27;
+    PDWORD64 F28;
+    PDWORD64 F29;
+    PDWORD64 F30;
+    PDWORD64 F31;
+
+    PDWORD64 Hi;
+    PDWORD64 Lo;
+} T_KNONVOLATILE_CONTEXT_POINTERS, *PT_KNONVOLATILE_CONTEXT_POINTERS;
+
 #else
 
 #define T_CONTEXT CONTEXT

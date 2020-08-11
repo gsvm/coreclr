@@ -1102,7 +1102,7 @@ void ZapUnwindInfo::Save(ZapWriter * pZapWriter)
 {
     T_RUNTIME_FUNCTION runtimeFunction;
 
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     RUNTIME_FUNCTION__SetBeginAddress(&runtimeFunction, GetStartAddress());
     runtimeFunction.UnwindData = m_pUnwindData->GetRVA();
 #elif defined(_TARGET_AMD64_)
@@ -1219,7 +1219,7 @@ void ZapUnwindData::Save(ZapWriter * pZapWriter)
     pZapWriter->Write(pData, dwSize);
 }
 
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 
 UINT ZapUnwindData::GetAlignment()
 {

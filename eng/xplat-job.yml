@@ -32,7 +32,9 @@ jobs:
     continueOnError: ${{ parameters.continueOnError }}
 
     # Send telemetry for all builds
-    enableTelemetry: true
+    #enableTelemetry: true
+    # don't know how to install enableTelemetry
+    enableTelemetry: false
     helixRepo: 'dotnet/coreclr'
     helixType: ${{ parameters.helixType }}
 
@@ -43,7 +45,8 @@ jobs:
 
       # Public Linux Build Pool
       ${{ if and(eq(parameters.osGroup, 'Linux'), eq(variables['System.TeamProject'], 'public')) }}:
-        name:  NetCorePublic-Pool
+        #name:  NetCorePublic-Pool
+        name:  'Hosted Ubuntu 1604'
         queue: BuildPool.Ubuntu.1604.Amd64.Open
 
       # Official Build Linux Pool
@@ -70,7 +73,8 @@ jobs:
 
       # Public Windows Build Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), eq(variables['System.TeamProject'], 'public')) }}:
-        name: NetCorePublic-Pool
+        #name: NetCorePublic-Pool
+        vmImage: 'vs2017-win2016'
         queue: BuildPool.Windows.10.Amd64.VS2017.Open
 
     workspace:

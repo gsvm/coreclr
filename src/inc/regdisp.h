@@ -45,7 +45,8 @@ struct REGDISPLAY_BASE {
 #endif // DEBUG_REGDISPLAY
 
     TADDR SP;
-    TADDR ControlPC;
+    /* FIXME for MIPS */
+    TADDR ControlPC; // MIPS: use RA for PC
 };
 
 inline PCODE GetControlPC(REGDISPLAY_BASE *pRD) {
@@ -178,9 +179,37 @@ typedef struct _Arm64VolatileContextPointer
     };
 } Arm64VolatileContextPointer;
 #endif //_TARGET_ARM64_
+
+#if defined(_TARGET_MIPS64_)
+typedef struct _Mips64VolatileContextPointer
+{
+    PDWORD64 At;
+    PDWORD64 V0;
+    PDWORD64 V1;
+    PDWORD64 A0;
+    PDWORD64 A1;
+    PDWORD64 A2;
+    PDWORD64 A3;
+    PDWORD64 A4;
+    PDWORD64 A5;
+    PDWORD64 A6;
+    PDWORD64 A7;
+    PDWORD64 T0;
+    PDWORD64 T1;
+    PDWORD64 T2;
+    PDWORD64 T3;
+    PDWORD64 T8;
+    PDWORD64 T9;
+} Mips64VolatileContextPointer;
+#endif
+
 struct REGDISPLAY : public REGDISPLAY_BASE {
 #ifdef _TARGET_ARM64_
     Arm64VolatileContextPointer     volatileCurrContextPointers;
+#endif
+
+#ifdef _TARGET_MIPS64_
+    Mips64VolatileContextPointer    volatileCurrContextPointers;
 #endif
 
     REGDISPLAY()
@@ -296,6 +325,8 @@ inline LPVOID GetRegdisplayReturnValue(REGDISPLAY *display)
     return (LPVOID)((TADDR)display->pCurrentContext->R0);
 #elif defined(_TARGET_X86_)
     return (LPVOID)display->pCurrentContext->Eax;
+#elif defined(_TARGET_MIPS64_)
+    return (LPVOID)display->pCurrentContext->V0;
 #else
     PORTABILITY_ASSERT("GetRegdisplayReturnValue NYI for this platform (Regdisp.h)");
     return NULL;
@@ -340,7 +371,19 @@ inline void FillContextPointers(PT_KNONVOLATILE_CONTEXT_POINTERS pCtxPtrs, PT_CO
     {
         *(&pCtxPtrs->X19 + i) = (&pCtx->X19 + i);
     }
-#elif defined(_TARGET_ARM_) // _TARGET_ARM64_
+#elif defined(_TARGET_MIPS64_)  // _TARGET_ARM64_
+    *(&pCtxPtrs->S0) = &pCtx->S0;
+    *(&pCtxPtrs->S1) = &pCtx->S1;
+    *(&pCtxPtrs->S2) = &pCtx->S2;
+    *(&pCtxPtrs->S3) = &pCtx->S3;
+    *(&pCtxPtrs->S4) = &pCtx->S4;
+    *(&pCtxPtrs->S5) = &pCtx->S5;
+    *(&pCtxPtrs->S6) = &pCtx->S6;
+    *(&pCtxPtrs->S7) = &pCtx->S7;
+    *(&pCtxPtrs->Gp) = &pCtx->Gp;
+    *(&pCtxPtrs->Fp) = &pCtx->Fp;
+    *(&pCtxPtrs->Ra) = &pCtx->Ra;
+#elif defined(_TARGET_ARM_) // _TARGET_MIPS64_
     // Copy over the nonvolatile integer registers (R4-R11)
     for (int i = 0; i < 8; i++)
     {
@@ -423,7 +466,26 @@ inline void FillRegDisplay(const PREGDISPLAY pRD, PT_CONTEXT pctx, PT_CONTEXT pC
     // Fill volatile context pointers. They can be used by GC in the case of the leaf frame
     for (int i=0; i < 18; i++)
         pRD->volatileCurrContextPointers.X[i] = &pctx->X[i];
-#endif // _TARGET_ARM64_
+#elif defined(_TARGET_MIPS64_) // _TARGET_ARM64_
+    /* FIXME for MIPS */
+    pRD->volatileCurrContextPointers.At = &pctx->At;
+    pRD->volatileCurrContextPointers.V0 = &pctx->V0;
+    pRD->volatileCurrContextPointers.V1 = &pctx->V1;
+    pRD->volatileCurrContextPointers.A0 = &pctx->A0;
+    pRD->volatileCurrContextPointers.A1 = &pctx->A1;
+    pRD->volatileCurrContextPointers.A2 = &pctx->A2;
+    pRD->volatileCurrContextPointers.A3 = &pctx->A3;
+    pRD->volatileCurrContextPointers.A4 = &pctx->A4;
+    pRD->volatileCurrContextPointers.A5 = &pctx->A5;
+    pRD->volatileCurrContextPointers.A6 = &pctx->A6;
+    pRD->volatileCurrContextPointers.A7 = &pctx->A7;
+    pRD->volatileCurrContextPointers.T0 = &pctx->T0;
+    pRD->volatileCurrContextPointers.T1 = &pctx->T1;
+    pRD->volatileCurrContextPointers.T2 = &pctx->T2;
+    pRD->volatileCurrContextPointers.T3 = &pctx->T3;
+    pRD->volatileCurrContextPointers.T8 = &pctx->T8;
+    pRD->volatileCurrContextPointers.T9 = &pctx->T9;
+#endif // _TARGET_MIPS64_
 
 #ifdef DEBUG_REGDISPLAY
     pRD->_pThread = NULL;
@@ -503,6 +565,9 @@ inline size_t * getRegAddr (unsigned regNum, PTR_CONTEXT regs)
 #elif defined(_TARGET_ARM64_)
     _ASSERTE(regNum < 31);
     return (size_t *)&regs->X0 + regNum;
+#elif defined(_TARGET_MIPS64_)
+    _ASSERTE(regNum < 31);
+    return (size_t *)&regs->R0 + regNum;
 #else
     _ASSERTE(!"@TODO Port - getRegAddr (Regdisp.h)");
 #endif

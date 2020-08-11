@@ -545,7 +545,11 @@ class SigParser
             }
             if (pPtr != NULL)
             {
+#if defined(_TARGET_MIPS64_)
+                memcpy(pPtr, m_ptr, sizeof(void*));
+#else
                 *pPtr = *(void * UNALIGNED *)m_ptr;
+#endif
             }
             SkipBytes(sizeof(void *));
 

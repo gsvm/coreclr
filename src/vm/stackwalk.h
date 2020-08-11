@@ -310,7 +310,7 @@ public:
      */
     bool IsGcSafe();
 
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     bool HasTailCalls();
 #endif // _TARGET_ARM_ || _TARGET_ARM64_
 

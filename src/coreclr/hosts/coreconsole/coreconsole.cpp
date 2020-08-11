@@ -589,6 +589,10 @@ static wchar_t programPath[MAX_LONGPATH];
 
 int __cdecl wmain(const int argc, const wchar_t* argv[])
 {
+#if defined(_TARGET_MIPS64_) && defined(DEBUG) && defined(UNALIGNED_CHECK_ENABLE)
+    UNALIGNED_CHECK_ENABLE;
+#endif
+
     DWORD dwModuleFileName = GetModuleFileName(NULL, programPath, MAX_LONGPATH);
     if (dwModuleFileName == 0 || dwModuleFileName >= MAX_LONGPATH) {
         ::wprintf(W("Failed to get the path to the current executable"));

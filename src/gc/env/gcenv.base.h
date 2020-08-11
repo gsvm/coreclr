@@ -227,6 +227,12 @@ typedef DWORD (WINAPI *PTHREAD_START_ROUTINE)(void* lpThreadParameter);
  #define MemoryBarrier __sync_synchronize
 #endif // __arm__
 
+#ifdef __mips64
+////FIXME for MIPS: should confirm.
+ #define YieldProcessor() __asm__ volatile( "nop ; nop; nop; nop; nop  \n")
+ #define MemoryBarrier __sync_synchronize
+#endif // __mips64__
+
 #endif // _MSC_VER
 
 #ifdef _MSC_VER

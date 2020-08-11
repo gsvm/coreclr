@@ -80,6 +80,21 @@ Abstract:
     ASSIGN_REG(Ebx)        \
     ASSIGN_REG(Esi)        \
     ASSIGN_REG(Edi)
+#elif defined(_MIPS64_)
+#define ASSIGN_UNWIND_REGS \
+    ASSIGN_REG(Pc)         \
+    ASSIGN_REG(Gp)         \
+    ASSIGN_REG(Sp)         \
+    ASSIGN_REG(Fp)         \
+    ASSIGN_REG(Ra)         \
+    ASSIGN_REG(S0)         \
+    ASSIGN_REG(S1)         \
+    ASSIGN_REG(S2)         \
+    ASSIGN_REG(S3)         \
+    ASSIGN_REG(S4)         \
+    ASSIGN_REG(S5)         \
+    ASSIGN_REG(S6)         \
+    ASSIGN_REG(S7)
 #else
 #error unsupported architecture
 #endif
@@ -185,6 +200,20 @@ void UnwindContextToWinContext(unw_cursor_t *cursor, CONTEXT *winContext)
     unw_get_reg(cursor, UNW_AARCH64_X26, (unw_word_t *) &winContext->X26);
     unw_get_reg(cursor, UNW_AARCH64_X27, (unw_word_t *) &winContext->X27);
     unw_get_reg(cursor, UNW_AARCH64_X28, (unw_word_t *) &winContext->X28);
+#elif defined(_MIPS64_)
+    unw_get_reg(cursor, UNW_REG_IP, (unw_word_t *) &winContext->Pc);
+    unw_get_reg(cursor, UNW_MIPS_R28, (unw_word_t *) &winContext->Gp);
+    unw_get_reg(cursor, UNW_REG_SP, (unw_word_t *) &winContext->Sp);
+    unw_get_reg(cursor, UNW_MIPS_R30, (unw_word_t *) &winContext->Fp);
+    unw_get_reg(cursor, UNW_MIPS_R31, (unw_word_t *) &winContext->Ra);
+    unw_get_reg(cursor, UNW_MIPS_R16, (unw_word_t *) &winContext->S0);
+    unw_get_reg(cursor, UNW_MIPS_R17, (unw_word_t *) &winContext->S1);
+    unw_get_reg(cursor, UNW_MIPS_R18, (unw_word_t *) &winContext->S2);
+    unw_get_reg(cursor, UNW_MIPS_R19, (unw_word_t *) &winContext->S3);
+    unw_get_reg(cursor, UNW_MIPS_R20, (unw_word_t *) &winContext->S4);
+    unw_get_reg(cursor, UNW_MIPS_R21, (unw_word_t *) &winContext->S5);
+    unw_get_reg(cursor, UNW_MIPS_R22, (unw_word_t *) &winContext->S6);
+    unw_get_reg(cursor, UNW_MIPS_R23, (unw_word_t *) &winContext->S7);
 #else
 #error unsupported architecture
 #endif
@@ -243,6 +272,18 @@ void GetContextPointers(unw_cursor_t *cursor, unw_context_t *unwContext, KNONVOL
     GetContextPointer(cursor, unwContext, UNW_AARCH64_X27, &contextPointers->X27);
     GetContextPointer(cursor, unwContext, UNW_AARCH64_X28, &contextPointers->X28);
     GetContextPointer(cursor, unwContext, UNW_AARCH64_X29, &contextPointers->Fp);
+#elif defined(_MIPS64_)
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R16, &contextPointers->S0);
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R17, &contextPointers->S1);
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R18, &contextPointers->S2);
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R19, &contextPointers->S3);
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R20, &contextPointers->S4);
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R21, &contextPointers->S5);
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R22, &contextPointers->S6);
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R23, &contextPointers->S7);
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R28, &contextPointers->Gp);
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R30, &contextPointers->Fp);
+    GetContextPointer(cursor, unwContext, UNW_MIPS_R31, &contextPointers->Ra);
 #else
 #error unsupported architecture
 #endif
@@ -317,14 +358,14 @@ BOOL PAL_VirtualUnwind(CONTEXT *context, KNONVOLATILE_CONTEXT_POINTERS *contextP
     if (unw_is_signal_frame(&cursor) > 0)
     {
         context->ContextFlags |= CONTEXT_EXCEPTION_ACTIVE;
-#if defined(_ARM_) || defined(_ARM64_) || defined(_X86_)
+#if defined(_ARM_) || defined(_ARM64_) || defined(_MIPS64_) || defined(_X86_)
         context->ContextFlags &= ~CONTEXT_UNWOUND_TO_CALL;
 #endif // _ARM_ || _ARM64_
     }
     else
     {
         context->ContextFlags &= ~CONTEXT_EXCEPTION_ACTIVE;
-#if defined(_ARM_) || defined(_ARM64_) || defined(_X86_)
+#if defined(_ARM_) || defined(_ARM64_) || defined(_MIPS64_) || defined(_X86_)
         context->ContextFlags |= CONTEXT_UNWOUND_TO_CALL;
 #endif // _ARM_ || _ARM64_
     }

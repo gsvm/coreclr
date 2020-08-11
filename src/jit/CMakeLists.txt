@@ -206,6 +206,14 @@ if (WIN32)
       hwintrinsiclistxarch.h
       hwintrinsicxarch.h
       instrsxarch.h)
+  #elseif (CLR_CMAKE_TARGET_ARCH_MIPS64)
+  #  list (APPEND JIT_HEADERS
+  #    emitmips64.h
+  #    emitfmtsmips64.h
+  #    #hwintrinsicMips64.h       ###Not implemented on mips.
+  #    #hwintrinsiclistMips64.h   ###Not implemented on mips.
+  #    instrsmips64.h
+  #    registermips64.h)
   endif ()
 endif(WIN32)
 
@@ -264,6 +272,15 @@ set( JIT_ARM64_SOURCES
   hwintrinsicArm64.cpp
 )
 
+set( JIT_MIPS64_SOURCES
+  codegenmips64.cpp
+  emitmips64.cpp
+  lowermips64.cpp
+  lsramips64.cpp
+  targetmips64.cpp
+  unwindmips64.cpp
+)
+
 if(CLR_CMAKE_TARGET_ARCH_AMD64)
   set(JIT_ARCH_SOURCES ${JIT_AMD64_SOURCES})
 elseif(CLR_CMAKE_TARGET_ARCH_ARM)
@@ -272,6 +289,8 @@ elseif(CLR_CMAKE_TARGET_ARCH_I386)
   set(JIT_ARCH_SOURCES ${JIT_I386_SOURCES})
 elseif(CLR_CMAKE_TARGET_ARCH_ARM64)
   set(JIT_ARCH_SOURCES ${JIT_ARM64_SOURCES})
+elseif(CLR_CMAKE_TARGET_ARCH_MIPS64)
+  set(JIT_ARCH_SOURCES ${JIT_MIPS64_SOURCES})
 else()
   clr_unknown_arch()
 endif()
@@ -291,6 +310,7 @@ convert_to_absolute_path(JIT_AMD64_SOURCES ${JIT_AMD64_SOURCES})
 convert_to_absolute_path(JIT_ARM_SOURCES ${JIT_ARM_SOURCES})
 convert_to_absolute_path(JIT_I386_SOURCES ${JIT_I386_SOURCES})
 convert_to_absolute_path(JIT_ARM64_SOURCES ${JIT_ARM64_SOURCES})
+convert_to_absolute_path(JIT_MIPS64_SOURCES ${JIT_MIPS64_SOURCES})
 
 
 if(WIN32)

@@ -1104,7 +1104,8 @@ bool StubLinker::EmitStub(Stub* pStub, int globalsize, LoaderHeap* pHeap)
                         fixupval,
                         pCode + pCodeElem->m_globaloffset,
                         pLabelRef->m_variationCode,
-                        pData + pCodeElem->m_dataoffset);
+                        pData + pCodeElem->m_dataoffset
+                        MIPS64_ARG((BYTE)(srcglobaladdr - pCode)));
 
                     currOffset =
                         pCodeElem->m_globaloffset +
@@ -1782,6 +1783,12 @@ bool StubLinker::EmitUnwindInfo(Stub* pStub, int globalsize, LoaderHeap* pHeap)
             (epilogUnwindCodeIndex << 22)|
             (codeWordsCount << 27);  
     } // end else (!m_fProlog)
+
+#elif defined(_TARGET_MIPS64_)
+    //FIXME for MIPS: mips not support STUBLINKER_GENERATES_UNWIND_INFO
+    _ASSERTE(!"StubLinker::EmitUnwindInfo: Unimplements for MIPS!!!");
+    T_RUNTIME_FUNCTION *pCurFunction = NULL;
+
 #else
     PORTABILITY_ASSERT("StubLinker::EmitUnwindInfo");
     T_RUNTIME_FUNCTION *pCurFunction = NULL;

@@ -352,6 +352,78 @@ private:
     }
 };
 
+// MIPS64 struct passing
+enum MIPS64ClassificationType : unsigned __int8
+{
+    //MIPS64ClassificationTypeNotDouble          = 0,
+    MIPS64ClassificationTypeUnknown            = 0,
+    MIPS64ClassificationTypeDouble             = 1,
+    MIPS64ClassificationTypeInteger            = 2,
+    MIPS64ClassificationTypeFloat              = 3,
+    MIPS64ClassificationTypeTwoFloat           = 4,
+    MIPS64ClassificationTypeIntegerReference   = 5,
+    MIPS64ClassificationTypeIntegerByRef       = 6,
+};
+
+// Represents classification information for a struct.
+struct MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR
+{
+    MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR()
+    {
+        Initialize();
+    }
+
+    unsigned int             structSize;                  // The size of struct
+    unsigned int             eightByteCount;              // Number of eightbytes for this struct.
+    MIPS64ClassificationType eightByteClassifications[8]; // The eightbytes type classification.
+
+    // Members
+
+    //------------------------------------------------------------------------
+    // CopyFrom: Copies a struct classification into this one.
+    //
+    // Arguments:
+    //    'copyFrom' the struct classification to copy from.
+    //
+    void CopyFrom(const MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR& copyFrom)
+    {
+        structSize     = copyFrom.structSize;
+        eightByteCount = copyFrom.eightByteCount;
+
+        for (int i = 0; i < 8; i++)
+        {
+            eightByteClassifications[i] = copyFrom.eightByteClassifications[i];
+        }
+    }
+
+    bool IsIntegerSlot(unsigned slotIndex) const
+    {
+        return (eightByteClassifications[slotIndex] == MIPS64ClassificationTypeInteger);
+    }
+
+    bool IsValidSlot(unsigned slotIndex) const
+    {
+        return (eightByteClassifications[slotIndex] != MIPS64ClassificationTypeUnknown);
+    }
+
+    bool IsDoubleSlot(unsigned slotIndex) const
+    {
+        return (eightByteClassifications[slotIndex] == MIPS64ClassificationTypeDouble);
+    }
+
+private:
+    void Initialize()
+    {
+        structSize     = 0;
+        eightByteCount = 0;
+
+        for (int i = 0; i < 8; i++)
+        {
+            eightByteClassifications[i] = MIPS64ClassificationTypeUnknown;
+        }
+    }
+};
+
 // CorInfoHelpFunc defines the set of helpers (accessed via the ICorDynamicInfo::getHelperFtn())
 // These helpers can be called by native code which executes in the runtime.
 // Compilers can emit calls to these helpers.
@@ -2945,6 +3017,11 @@ public:
     virtual bool getSystemVAmd64PassStructInRegisterDescriptor(
         /* IN */    CORINFO_CLASS_HANDLE        structHnd,
         /* OUT */   SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr
+        ) = 0;
+
+    virtual void getMIPS64PassStructInRegisterDescriptor(
+        /* IN */    CORINFO_CLASS_HANDLE        structHnd,
+        /* OUT */   MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr
         ) = 0;
 
 };

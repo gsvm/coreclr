@@ -1928,7 +1928,8 @@ static BOOL IsVarargPInvokeStub(PCODE stubStartAddress)
     if (stubStartAddress == GetEEFuncEntryPoint(VarargPInvokeStub))
         return TRUE;
 
-#if !defined(_TARGET_X86_) && !defined(_TARGET_ARM64_)
+#if !defined(_TARGET_X86_) && !defined(_TARGET_ARM64_) && !defined(_TARGET_MIPS64_)
+    /* FIXME for MIPS: should confirm. */
     if (stubStartAddress == GetEEFuncEntryPoint(VarargPInvokeStub_RetBuffArg))
         return TRUE;
 #endif

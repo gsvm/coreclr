@@ -515,6 +515,10 @@ public:
         /*IN*/  CORINFO_CLASS_HANDLE _structHnd,
         /*OUT*/ SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr);
 
+    void getMIPS64PassStructInRegisterDescriptor(
+        /*IN*/  CORINFO_CLASS_HANDLE _structHnd,
+        /*OUT*/ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr);
+
     // Check Visibility rules.
     // For Protected (family access) members, type of the instance is also
     // considered when checking visibility rules.

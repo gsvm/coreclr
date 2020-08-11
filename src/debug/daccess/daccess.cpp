@@ -5536,6 +5536,8 @@ ClrDataAccess::Initialize(void)
         CorDebugPlatform hostPlatform = CORDB_PLATFORM_POSIX_ARM;
     #elif defined(DBG_TARGET_ARM64)
         CorDebugPlatform hostPlatform = CORDB_PLATFORM_POSIX_ARM64;
+    #elif defined(DBG_TARGET_MIPS64)
+        CorDebugPlatform hostPlatform = CORDB_PLATFORM_POSIX_MIPS64;
     #else
         #error Unknown Processor.
     #endif

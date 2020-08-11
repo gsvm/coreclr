@@ -71,6 +71,9 @@ PCSTR GetRegName (UINT32 regnum)
     _snprintf_s(szRegName, _countof(szRegName), sizeof(szRegName), "r%u", regnum);
     return szRegName;
 
+#elif defined(_TARGET_MIPS64_)
+    assert(!"unimplemented on MIPS yet");
+    return 0;
 #endif
 }
 

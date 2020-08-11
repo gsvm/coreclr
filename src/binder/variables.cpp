@@ -82,6 +82,7 @@ namespace BINDER_SPACE
             architectureAMD64.SetLiteral(W("AMD64"));
             architectureARM.SetLiteral(W("ARM"));
             architectureARM64.SetLiteral(W("ARM64"));
+            architectureMIPS64.SetLiteral(W("MIPS64"));
             cultureNeutral.SetLiteral(W("neutral"));
             mscorlib.SetLiteral(CoreLibName_W);
             

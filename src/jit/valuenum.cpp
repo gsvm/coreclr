@@ -58,6 +58,9 @@ struct FloatTraits
         unsigned bits = 0xFFC00000u;
 #elif defined(_TARGET_ARMARCH_)
         unsigned           bits = 0x7FC00000u;
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+        unsigned bits = 0xFFC00000u;
 #else
 #error Unsupported or unset target architecture
 #endif
@@ -84,6 +87,9 @@ struct DoubleTraits
         unsigned long long bits = 0xFFF8000000000000ull;
 #elif defined(_TARGET_ARMARCH_)
         unsigned long long bits = 0x7FF8000000000000ull;
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+        unsigned long long bits = 0xFFF8000000000000ull;
 #else
 #error Unsupported or unset target architecture
 #endif
@@ -8613,7 +8619,7 @@ void Compiler::fgValueNumberHelperCallFunc(GenTreeCall* call, VNFunc vnf, ValueN
         vnpUniq.SetBoth(vnStore->VNForExpr(compCurBB, call->TypeGet()));
     }
 
-#if defined(FEATURE_READYTORUN_COMPILER) && defined(_TARGET_ARMARCH_)
+#if defined(FEATURE_READYTORUN_COMPILER) && (defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_))
     if (call->IsR2RRelativeIndir())
     {
 #ifdef DEBUG

@@ -5241,7 +5241,8 @@ void DacDbiInterfaceImpl::Hijack(
     // is automatically turned off.
     //
     // The debugger could always re-enable the single-step flag if it wants to.    
-#ifndef _TARGET_ARM_
+#if !defined(_TARGET_ARM_) && !defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
     UnsetSSFlag(reinterpret_cast<DT_CONTEXT *>(&ctx)); 
 #endif
 

@@ -1305,6 +1305,13 @@ bool MyICJI::getSystemVAmd64PassStructInRegisterDescriptor(
     return jitInstance->mc->repGetSystemVAmd64PassStructInRegisterDescriptor(structHnd, structPassInRegDescPtr);
 }
 
+void MyICJI::getMIPS64PassStructInRegisterDescriptor(
+    /* IN */ CORINFO_CLASS_HANDLE                           structHnd,
+    /* OUT */ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr)
+{
+    //assert(!"unimplemented on MIPS yet");
+}
+
 // Stuff on ICorDynamicInfo
 DWORD MyICJI::getThreadTLSIndex(void** ppIndirection)
 {

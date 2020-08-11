@@ -174,6 +174,7 @@ extern void notYetImplemented(const char* msg, const char* file, unsigned line);
 #define NYI_X86(msg)    do { } while (0)
 #define NYI_ARM(msg)    do { } while (0)
 #define NYI_ARM64(msg)  do { } while (0)
+#define NYI_MIPS64(msg) do { } while (0)
 
 #elif defined(_TARGET_X86_)
 
@@ -181,6 +182,7 @@ extern void notYetImplemented(const char* msg, const char* file, unsigned line);
 #define NYI_X86(msg)    NYIRAW("NYI_X86: " msg)
 #define NYI_ARM(msg)    do { } while (0)
 #define NYI_ARM64(msg)  do { } while (0)
+#define NYI_MIPS64(msg) do { } while (0)
 
 #elif defined(_TARGET_ARM_)
 
@@ -188,6 +190,7 @@ extern void notYetImplemented(const char* msg, const char* file, unsigned line);
 #define NYI_X86(msg)    do { } while (0)
 #define NYI_ARM(msg)    NYIRAW("NYI_ARM: " msg)
 #define NYI_ARM64(msg)  do { } while (0)
+#define NYI_MIPS64(msg) do { } while (0)
 
 #elif defined(_TARGET_ARM64_)
 
@@ -195,6 +198,15 @@ extern void notYetImplemented(const char* msg, const char* file, unsigned line);
 #define NYI_X86(msg)    do { } while (0)
 #define NYI_ARM(msg)    do { } while (0)
 #define NYI_ARM64(msg)  NYIRAW("NYI_ARM64: " msg)
+#define NYI_MIPS64(msg) do { } while (0)
+
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS: all related should add mips64.
+#define NYI_AMD64(msg)  do { } while (0)
+#define NYI_X86(msg)    do { } while (0)
+#define NYI_ARM(msg)    do { } while (0)
+#define NYI_ARM64(msg)  do { } while (0)
+#define NYI_MIPS64(msg) NYIRAW("NYI_MIPS64: " msg)
 
 #else
 

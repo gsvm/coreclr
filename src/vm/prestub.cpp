@@ -2167,9 +2167,9 @@ PCODE TheVarargNDirectStub(BOOL hasRetBuffArg)
 {
     LIMITED_METHOD_CONTRACT;
 
-#if !defined(_TARGET_X86_) && !defined(_TARGET_ARM64_)
+#if !defined(_TARGET_X86_) && !defined(_TARGET_ARM64_) && !defined(_TARGET_MIPS64_)
     if (hasRetBuffArg)
-    {
+    {/* FIXME for MIPS: should confirm. */
         return GetEEFuncEntryPoint(VarargPInvokeStub_RetBuffArg);
     }
     else
@@ -2228,6 +2228,11 @@ static PCODE PatchNonVirtualExternalMethod(MethodDesc * pMD, PCODE pCode, PTR_CO
         // ThumbBit must be set on the target address
         _ASSERTE(pCode & THUMB_CODE);
         #endif
+#elif  defined(_TARGET_MIPS64_)
+#pragma message("Unimplemented yet")
+        ////FIXME for MIPS!
+        //PORTABILITY_ASSERT("ExternalMethodFixupWorker MIPS!");
+        _ASSERTE(!"Unimplemented yet on MIPS");
 #else
         PORTABILITY_ASSERT("ExternalMethodFixupWorker");
 #endif

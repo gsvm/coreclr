@@ -621,6 +621,42 @@ struct CORCOMPILE_CODE_MANAGER_ENTRY
         PCODE                m_pTarget;
     };
 
+#elif defined(_TARGET_MIPS64_)
+    struct  CORCOMPILE_VIRTUAL_IMPORT_THUNK
+    {//can optimize ???
+        // ori t0,ra,0x0
+        // bal 8
+        // nop
+        // ld  t9,20(ra)          ; =m_pTarget
+        // daddiu  t2,ra,-12      ; =this
+        // jr  t9
+        // ori ra,t0,0x0
+        DWORD                m_rgCode[7];
+
+        // WORD to store the slot ID
+        WORD                slotNum;
+
+        // The target address - initially, this will point to VirtualMethodFixupStub.
+        // Post patchup by the stub, it will point to the actual method body.
+        PCODE                m_pTarget;
+    };
+
+    ////FIXME for MIPS: not implement!
+    struct  CORCOMPILE_EXTERNAL_METHOD_THUNK
+    {
+        // Array of words to do the following:
+        // adr         x12, #0            ; Save the current address relative to which we will get slot ID and address to patch.
+        // ldr         x10, [x12, #16]    ; Load the target address.
+        // br          x10                ; Jump to the target
+        DWORD                m_rgCode[3];
+
+        DWORD                m_padding; //aligning stack to 16 bytes
+
+        // The target address - initially, this will point to ExternalMethodFixupStub.
+        // Post patchup by the stub, it will point to the actual method body.
+        PCODE                m_pTarget;
+    };
+
 #endif
 
 //
@@ -877,6 +913,8 @@ struct CORCOMPILE_DEPENDENCY
 /*********************************************************************************/
 // Flags used to encode HelperTable
 #if defined(_TARGET_ARM64_)
+#define HELPER_TABLE_ENTRY_LEN      16
+#elif defined(_TARGET_MIPS64_)
 #define HELPER_TABLE_ENTRY_LEN      16
 #else
 #define HELPER_TABLE_ENTRY_LEN      8

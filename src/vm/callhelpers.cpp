@@ -520,7 +520,7 @@ void MethodDescCallSite::CallTargetWorker(const ARG_SLOT *pArguments, ARG_SLOT *
             // We need to pass in a pointer, but be careful of the ARG_SLOT calling convention. We might already have a pointer in the ARG_SLOT.
             PVOID pSrc = stackSize > sizeof(ARG_SLOT) ? (LPVOID)ArgSlotToPtr(pArguments[arg]) : (LPVOID)ArgSlotEndianessFixup((ARG_SLOT*)&pArguments[arg], stackSize);
 
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
             if (argDest.IsStructPassedInRegs())
             {
                 TypeHandle th;
@@ -529,7 +529,7 @@ void MethodDescCallSite::CallTargetWorker(const ARG_SLOT *pArguments, ARG_SLOT *
                 argDest.CopyStructToRegisters(pSrc, th.AsMethodTable()->GetNumInstanceFieldBytes(), 0);
             }
             else
-#endif // UNIX_AMD64_ABI
+#endif // UNIX_AMD64_ABI || _TARGET_MIPS64_
             {
                 PVOID pDest = argDest.GetDestinationAddress();
 
@@ -538,7 +538,11 @@ void MethodDescCallSite::CallTargetWorker(const ARG_SLOT *pArguments, ARG_SLOT *
                     case 1:
                     case 2:
                     case 4:
+#if defined(_TARGET_MIPS64_)
+                        *((INT64*)pDest) = (INT32)pArguments[arg];
+#else
                         *((INT32*)pDest) = (INT32)pArguments[arg];
+#endif
                         break;
 
                     case 8:

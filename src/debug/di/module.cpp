@@ -4528,6 +4528,8 @@ int CordbNativeCode::GetCallInstructionLength(BYTE *ip, ULONG32 count)
         return 2;
 #elif defined(DBG_TARGET_ARM64)
     return MAX_INSTRUCTION_LENGTH;
+#elif defined(DBG_TARGET_MIPS64)
+    return MAX_INSTRUCTION_LENGTH;
 #elif defined(DBG_TARGET_X86)
     if (count < 2)
         return -1;

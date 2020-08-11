@@ -43,11 +43,11 @@ struct ArgLocDesc
     int     m_idxStack;           // First stack slot used (or -1)
     int     m_cStack;             // Count of stack slots used (or 0)
 
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
 
     EEClass* m_eeClass;           // For structs passed in register, it points to the EEClass of the struct
 
-#endif // UNIX_AMD64_ABI
+#endif // UNIX_AMD64_ABI || _TARGET_MIPS64_
 
 #ifdef FEATURE_HFA
     static unsigned getHFAFieldSize(CorElementType  hfaType)
@@ -62,6 +62,7 @@ struct ArgLocDesc
         }
     }
 #endif
+
 #if defined(_TARGET_ARM64_)
     unsigned m_hfaFieldSize;      // Size of HFA field in bytes.
     void setHFAFieldSize(CorElementType  hfaType)
@@ -94,7 +95,7 @@ struct ArgLocDesc
 #if defined(_TARGET_ARM64_)
         m_hfaFieldSize = 0;
 #endif // defined(_TARGET_ARM64_)
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
         m_eeClass = NULL;
 #endif
     }
@@ -138,6 +139,27 @@ struct TransitionBlock
     };
     TADDR padding; // Keep size of TransitionBlock as multiple of 16-byte. Simplifies code in PROLOG_WITH_TRANSITION_BLOCK
     INT64 m_x8RetBuffReg;
+    ArgumentRegisters       m_argumentRegisters;
+#elif defined(_TARGET_MIPS64_)
+    union {
+        CalleeSavedRegisters m_calleeSavedRegisters;
+        struct {
+            INT64 fp; // frame pointer, or s8
+            TADDR m_ReturnAddress;
+            INT64 s0;
+            INT64 s1;
+            INT64 s2;
+            INT64 s3;
+            INT64 s4;
+            INT64 s5;
+            INT64 s6;
+            INT64 s7;
+            INT64 gp;
+        };
+    };
+    TADDR padding; // Keep size of TransitionBlock as multiple of 16-byte. Simplifies code in PROLOG_WITH_TRANSITION_BLOCK
+    INT64 lo;
+    INT64 hi;
     ArgumentRegisters       m_argumentRegisters;
 #else
     PORTABILITY_ASSERT("TransitionBlock");
@@ -194,7 +216,7 @@ struct TransitionBlock
     {
         LIMITED_METHOD_CONTRACT;
 
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
         return offset >= (int)sizeof(TransitionBlock);
 #else        
         int ofsArgRegs = GetOffsetOfArgumentRegisters();
@@ -217,7 +239,7 @@ struct TransitionBlock
     {
         LIMITED_METHOD_CONTRACT;
 
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
         _ASSERTE(offset != TransitionBlock::StructInRegsOffset);
 #endif        
         return (offset - GetOffsetOfArgumentRegisters()) / TARGET_POINTER_SIZE;
@@ -236,7 +258,7 @@ struct TransitionBlock
     static BOOL IsFloatArgumentRegisterOffset(int offset)
     {
         LIMITED_METHOD_CONTRACT;
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
         return (offset != TransitionBlock::StructInRegsOffset) && (offset < 0);
 #else        
         return offset < 0;
@@ -249,7 +271,7 @@ struct TransitionBlock
     static BOOL HasFloatRegister(int offset, ArgLocDesc* argLocDescForStructInRegs)
     {
         LIMITED_METHOD_CONTRACT;
-    #if defined(UNIX_AMD64_ABI)
+    #if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
         if (offset == TransitionBlock::StructInRegsOffset)
         {
             return argLocDescForStructInRegs->m_cFloatReg > 0;
@@ -285,7 +307,7 @@ struct TransitionBlock
     }
 
     static const int InvalidOffset = -1;
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
     // Special offset value to represent  struct passed in registers. Such a struct can span both
     // general purpose and floating point registers, so it can have two different offsets.
     static const int StructInRegsOffset = -2;
@@ -539,7 +561,7 @@ public:
 
     ArgLocDesc* GetArgLocDescForStructInRegs()
     {
-#if defined(UNIX_AMD64_ABI) || defined (_TARGET_ARM64_)
+#if defined(UNIX_AMD64_ABI) || defined (_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         return m_hasArgLocDescForStructInRegs ? &m_argLocDescForStructInRegs : NULL;
 #else
         return NULL;
@@ -686,6 +708,50 @@ public:
     }
 #endif // _TARGET_AMD64_ && UNIX_AMD64_ABI
 
+#ifdef _TARGET_MIPS64_
+    // Get layout information for the argument that the ArgIterator is currently visiting.
+    void GetArgLoc(int argOffset, ArgLocDesc *pLoc)
+    {
+        LIMITED_METHOD_CONTRACT;
+
+        if (m_hasArgLocDescForStructInRegs)
+        {
+            *pLoc = m_argLocDescForStructInRegs;
+            return;
+        }
+
+        if (argOffset == TransitionBlock::StructInRegsOffset)
+        {
+            // We always already have argLocDesc for structs passed in registers, we
+            // compute it in the GetNextOffset for those since it is always needed.
+            _ASSERTE(false);
+            return;
+        }
+
+        pLoc->Init();
+
+        int cSlots = (GetArgSize() + 7) / 8;
+
+        if (TransitionBlock::IsFloatArgumentRegisterOffset(argOffset))
+        {
+            _ASSERTE(cSlots == 1);
+            pLoc->m_idxFloatReg = (argOffset - TransitionBlock::GetOffsetOfFloatArgumentRegisters()) / 8;
+            pLoc->m_cFloatReg = cSlots;
+            return;
+        }
+        else if (!TransitionBlock::IsStackArgumentOffset(argOffset))
+        {
+            pLoc->m_idxGenReg = TransitionBlock::GetArgumentIndexFromOffset(argOffset);
+            pLoc->m_cGenReg = cSlots;
+        }
+        else
+        {
+            pLoc->m_idxStack = TransitionBlock::GetStackArgumentIndexFromOffset(argOffset);
+            pLoc->m_cStack = cSlots;
+        }
+    }
+#endif // _TARGET_MIPS64_
+
 protected:
     DWORD               m_dwFlags;              // Cached flags
     int                 m_nSizeOfArgStack;      // Cached value of SizeOfArgStack
@@ -696,10 +762,10 @@ protected:
     CorElementType      m_argType;
     int                 m_argSize;
     TypeHandle          m_argTypeHandle;
-#if (defined(_TARGET_AMD64_) && defined(UNIX_AMD64_ABI)) || defined(_TARGET_ARM64_)
+ #if (defined(_TARGET_AMD64_) && defined(UNIX_AMD64_ABI)) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     ArgLocDesc          m_argLocDescForStructInRegs;
     bool                m_hasArgLocDescForStructInRegs;
-#endif // (_TARGET_AMD64_ && UNIX_AMD64_ABI) || _TARGET_ARM64_
+#endif // (_TARGET_AMD64_ && UNIX_AMD64_ABI) || _TARGET_ARM64_ || _TARGET_MIPS64_
 
 #ifdef _TARGET_X86_
     int                 m_curOfs;           // Current position of the stack iterator
@@ -726,6 +792,12 @@ protected:
 #endif
 
 #ifdef _TARGET_ARM64_
+    int             m_idxGenReg;        // Next general register to be assigned a value
+    int             m_idxStack;         // Next stack slot to be assigned a value
+    int             m_idxFPReg;         // Next FP register to be assigned a value
+#endif
+
+#ifdef _TARGET_MIPS64_
     int             m_idxGenReg;        // Next general register to be assigned a value
     int             m_idxStack;         // Next stack slot to be assigned a value
     int             m_idxFPReg;         // Next FP register to be assigned a value
@@ -973,6 +1045,10 @@ int ArgIteratorTemplate<ARGITERATOR_BASE>::GetNextOffset()
         m_idxStack = 0;
 
         m_idxFPReg = 0;
+#elif defined(_TARGET_MIPS64_)
+        m_idxGenReg = numRegistersUsed;
+        m_idxStack = 0;
+        m_idxFPReg = numRegistersUsed;
 #else
         PORTABILITY_ASSERT("ArgIteratorTemplate::GetNextOffset");
 #endif
@@ -995,7 +1071,7 @@ int ArgIteratorTemplate<ARGITERATOR_BASE>::GetNextOffset()
     m_argSize = argSize;
     m_argTypeHandle = thValueType;
 
-#if defined(UNIX_AMD64_ABI) || defined (_TARGET_ARM64_)
+#if defined(UNIX_AMD64_ABI) || defined (_TARGET_ARM64_) || defined (_TARGET_MIPS64_)
     m_hasArgLocDescForStructInRegs = false;
 #endif
 
@@ -1397,6 +1473,104 @@ int ArgIteratorTemplate<ARGITERATOR_BASE>::GetNextOffset()
     int argOfs = TransitionBlock::GetOffsetOfArgs() + m_idxStack * 8;
     m_idxStack += cArgSlots;
     return argOfs;
+#elif defined(_TARGET_MIPS64_)
+
+    int cFPRegs = 0;
+    int cGenRegs = 0;
+    int cbArg = StackElemSize(argSize);
+    int cArgSlots = cbArg / STACK_ELEM_SIZE;
+    int cStack = 0;
+
+    switch (argType)
+    {
+
+    case ELEMENT_TYPE_R4:
+        // 32-bit floating point argument.
+        cFPRegs = 1;
+        break;
+
+    case ELEMENT_TYPE_R8:
+        // 64-bit floating point argument.
+        cFPRegs = 1;
+        break;
+
+    case ELEMENT_TYPE_VALUETYPE:
+    {
+        MethodTable *pMT = m_argTypeHandle.GetMethodTable();
+        EEClass* eeClass = pMT->GetClass();
+        if (m_idxGenReg < 8)
+        {
+            for (int i = 0; i < eeClass->GetNumberEightBytes() && (m_idxGenReg + cGenRegs + cFPRegs) < NUM_ARGUMENT_REGISTERS; i++)
+            {
+                if (eeClass->GetEightByteClassification(i) == MIPS64ClassificationTypeDouble)
+                {
+                    cFPRegs++;
+                }
+                else
+                {
+                    cGenRegs++;
+                }
+            }
+            cStack = (cArgSlots + m_idxGenReg > NUM_ARGUMENT_REGISTERS) ? (cArgSlots - cGenRegs - cFPRegs) : 0;
+
+            m_argLocDescForStructInRegs.Init();
+            m_argLocDescForStructInRegs.m_cGenReg = cGenRegs;
+            m_argLocDescForStructInRegs.m_cFloatReg = cFPRegs;
+            m_argLocDescForStructInRegs.m_cStack = cStack;
+            m_argLocDescForStructInRegs.m_idxGenReg = m_idxGenReg;
+            m_argLocDescForStructInRegs.m_idxFloatReg = m_idxFPReg;
+            m_argLocDescForStructInRegs.m_idxStack = m_idxStack;
+            m_argLocDescForStructInRegs.m_eeClass = eeClass;
+
+            m_hasArgLocDescForStructInRegs = true;
+
+            m_idxGenReg += cGenRegs + cFPRegs;
+            m_idxFPReg = m_idxGenReg;
+            m_idxStack += cStack;
+
+            return TransitionBlock::StructInRegsOffset;
+        }
+
+        break;
+    }
+
+    default:
+        break;
+    }
+
+    if (cFPRegs > 0 && !this->IsVarArg())
+    {
+        if (cFPRegs + m_idxFPReg <= NUM_ARGUMENT_REGISTERS)
+        {
+            int argOfs = TransitionBlock::GetOffsetOfFloatArgumentRegisters() + m_idxFPReg * 8;
+            m_idxFPReg += cFPRegs;
+            m_idxGenReg = m_idxFPReg;
+            return argOfs;
+        }
+    }
+    else
+    {
+        if (m_idxGenReg + cArgSlots <= NUM_ARGUMENT_REGISTERS)
+        {
+            int argOfs = TransitionBlock::GetOffsetOfArgumentRegisters() + m_idxGenReg * 8;
+            m_idxGenReg += cArgSlots;
+            m_idxFPReg = m_idxGenReg;
+            return argOfs;
+        }
+        else if (m_idxGenReg < 8)
+        {
+            int argOfs = TransitionBlock::GetOffsetOfArgumentRegisters() + m_idxGenReg * 8;
+            m_idxStack += (m_idxGenReg + cArgSlots - 8);
+            m_idxGenReg = 8;
+            m_idxFPReg = 8;
+            return argOfs;
+        }
+    }
+
+    int argOfs = TransitionBlock::GetOffsetOfArgs() + m_idxStack * STACK_ELEM_SIZE;
+    m_idxStack += cArgSlots;
+
+    return argOfs;
 #else
     PORTABILITY_ASSERT("ArgIteratorTemplate::GetNextOffset");
     return TransitionBlock::InvalidOffset;
@@ -1481,6 +1655,40 @@ void ArgIteratorTemplate<ARGITERATOR_BASE>::ComputeReturnFlags()
                 break;
             }
 #else // UNIX_AMD64_ABI
+
+#if defined(_TARGET_MIPS64_)
+            MethodTable *pMT = thValueType.AsMethodTable();
+            EEClass* eeClass = pMT->GetClass();
+
+            if (eeClass->GetNumberEightBytes() == 1)
+            {
+                if (eeClass->GetEightByteClassification(0) == MIPS64ClassificationTypeTwoFloat)
+                {
+                    flags |= (16 << RETURN_FP_SIZE_SHIFT);
+                    break;
+                }
+                else if (eeClass->GetEightByteClassification(0) == MIPS64ClassificationTypeDouble)
+                {
+                    flags |= (sizeof(double) << RETURN_FP_SIZE_SHIFT);
+                    break;
+                }
+                else if (eeClass->GetEightByteClassification(0) == MIPS64ClassificationTypeFloat)
+                {
+                    flags |= (sizeof(float) << RETURN_FP_SIZE_SHIFT);
+                    break;
+                }
+            }
+            else if (eeClass->GetNumberEightBytes() == 2)
+            {
+                // Size of the struct is 16 bytes
+                // The lowest two bits of the size encode the order of the int and SSE fields
+                if (eeClass->GetEightByteClassification(0) == MIPS64ClassificationTypeDouble && eeClass->GetEightByteClassification(1) == MIPS64ClassificationTypeDouble)
+                {
+                    flags |= (16 << RETURN_FP_SIZE_SHIFT);
+                    break;
+                }
+            }
+#endif
 
 #ifdef FEATURE_HFA
             if (thValueType.IsHFA() && !this->IsVarArg())
@@ -1620,6 +1828,32 @@ void ArgIteratorTemplate<ARGITERATOR_BASE>::ForceSigWalk()
 
 #else // _TARGET_X86_
 
+#ifdef _TARGET_MIPS64_
+
+    while (TransitionBlock::InvalidOffset != GetNextOffset())
+    {
+        int endOfs = m_idxGenReg * 8 + m_idxStack * 8;
+        {
+#if !defined(DACCESS_COMPILE)
+            if (endOfs > MAX_ARG_SIZE)
+            {
+#ifdef _DEBUG
+                // We should not ever throw exception in the "FORBIDGC_LOADER_USE_ENABLED" mode.
+                // The contract violation is required to workaround bug in the static contract analyzer.
+                _ASSERTE(!FORBIDGC_LOADER_USE_ENABLED());
+                CONTRACT_VIOLATION(ThrowsViolation);
+#endif
+                COMPlusThrow(kNotSupportedException);
+            }
+#endif
+        }
+    }
+    // Clear the iterator started flag
+    m_dwFlags &= ~ITERATION_STARTED;
+
+    int nSizeOfArgStack = m_idxStack * 8;
+
+#else // _TARGET_MIPS64_
     int maxOffset = TransitionBlock::GetOffsetOfArgs();
 
     int ofs;
@@ -1677,6 +1911,7 @@ void ArgIteratorTemplate<ARGITERATOR_BASE>::ForceSigWalk()
         (nSizeOfArgStack - sizeof(ArgumentRegisters)) : 0;
 #endif
 
+#endif // _TARGET_MIPS64_
 #endif // _TARGET_X86_
 
     // Cache the result

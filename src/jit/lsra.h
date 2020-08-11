@@ -764,6 +764,11 @@ private:
 #elif defined(_TARGET_X86_)
     static const regMaskTP LsraLimitSmallIntSet = (RBM_EAX | RBM_ECX | RBM_EDI);
     static const regMaskTP LsraLimitSmallFPSet  = (RBM_XMM0 | RBM_XMM1 | RBM_XMM2 | RBM_XMM6 | RBM_XMM7);
+#elif defined(_TARGET_MIPS64_)
+                ////FIXME for MIPS.
+    static const regMaskTP LsraLimitSmallIntSet = (RBM_T1 | RBM_AT | RBM_V0 | RBM_V1 | RBM_T0);
+    static const regMaskTP LsraLimitSmallFPSet  = (RBM_F0 | RBM_F1 | RBM_F2 | RBM_F8 | RBM_F9);
+#pragma  message("Unimplemented yet MIPS64")
 #else
 #error Unsupported or unset target architecture
 #endif // target
@@ -1009,6 +1014,10 @@ private:
     // partially using registers from the 2 register files.
     void unixAmd64UpdateRegStateForArg(LclVarDsc* argDsc);
 #endif // defined(UNIX_AMD64_ABI)
+
+#if defined(_TARGET_MIPS64_)
+    void MIPS64UpdateRegStateForArg(LclVarDsc* argDsc);
+#endif // _TARGET_MIPS64_
 
     // Update reg state for an incoming register argument
     void updateRegStateForArg(LclVarDsc* argDsc);
@@ -1480,6 +1489,13 @@ private:
         return ((type == TYP_SIMD16) || (type == TYP_SIMD12));
     }
     static const var_types LargeVectorSaveType = TYP_DOUBLE;
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+#pragma  message("Unimplemented yet MIPS64")
+    static bool varTypeNeedsPartialCalleeSave(var_types type)
+    {
+        return false;
+    }
 #else // !defined(_TARGET_AMD64_) && !defined(_TARGET_ARM64_)
 #error("Unknown target architecture for FEATURE_SIMD")
 #endif // !defined(_TARGET_AMD64_) && !defined(_TARGET_ARM64_)
@@ -1943,7 +1959,12 @@ public:
     // The max bits needed is based on max value of MAX_RET_REG_COUNT value
     // across all targets and that happens 4 on on Arm.  Hence index value
     // would be 0..MAX_RET_REG_COUNT-1.
+#ifdef _TARGET_MIPS64_
+    // For MIPS64, it should be MAX_ARG_REG_COUNT for ArgSplit.
+    unsigned char multiRegIdx : 3;
+#else // !_TARGET_MIPS64_
     unsigned char multiRegIdx : 2;
+#endif // !_TARGET_MIPS64_
 
     // Last Use - this may be true for multiple RefPositions in the same Interval
     unsigned char lastUse : 1;

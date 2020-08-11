@@ -839,6 +839,19 @@ void ZapVirtualMethodThunk::Save(ZapWriter * pZapWriter)
     // Slot ID is setup below, so now setup the initial target
     // to be our assembly helper.
     pImage->WriteReloc(&thunk, offsetof(CORCOMPILE_VIRTUAL_IMPORT_THUNK, m_pTarget), helper, 0, IMAGE_REL_BASED_PTR);
+#elif defined(_TARGET_MIPS64_)
+//can optimize ???
+
+    thunk.m_rgCode[0] = 0x37ec0000; //  ori t0,ra,0x0
+    thunk.m_rgCode[1] = 0x04110001; //  bal 8
+    thunk.m_rgCode[2] = 0x00000000; //  nop
+    thunk.m_rgCode[3] = 0xdff90014; //  ld  t9,20(ra)
+    thunk.m_rgCode[4] = 0x67eefff4; //  daddiu  t2,ra,-12
+    thunk.m_rgCode[5] = 0x03200008; //  jr  t9
+    thunk.m_rgCode[6] = 0x359f0000; //  ori ra,t0,0x0
+
+    pImage->WriteReloc(&thunk, offsetof(CORCOMPILE_VIRTUAL_IMPORT_THUNK, m_pTarget), helper, 0, IMAGE_REL_BASED_PTR);
+
 #else
     PORTABILITY_ASSERT("ZapVirtualMethodThunk::Save");
 #endif
@@ -1969,7 +1982,7 @@ DWORD ZapIndirectHelperThunk::SaveWorker(ZapWriter * pZapWriter)
 {
     ZapImage * pImage = ZapImage::GetImage(pZapWriter);
 
-    BYTE buffer[44];
+    BYTE buffer[64];
     BYTE * p = buffer;
 
 #if defined(_TARGET_X86_)
@@ -2190,6 +2203,72 @@ DWORD ZapIndirectHelperThunk::SaveWorker(ZapWriter * pZapWriter)
 
     // br x12
     *(DWORD *)p = 0xd61f0180;
+    p += 4;
+
+    // [Module*]
+    if (pImage != NULL)
+        pImage->WriteReloc(buffer, (int)(p - buffer), pImage->GetImportTable()->GetHelperImport(READYTORUN_HELPER_Module), 0, IMAGE_REL_BASED_PTR);
+    p += 8;
+
+    // [helper]
+    if (pImage != NULL)
+        pImage->WriteReloc(buffer, (int)(p - buffer), pImage->GetImportTable()->GetHelperImport(GetReadyToRunHelper()), 0, IMAGE_REL_BASED_PTR);
+    p += 8;
+
+#elif defined(_TARGET_MIPS64_)
+
+    if (IsDelayLoadHelper())
+    {
+        // t8 contains indirection cell
+        // Do nothing t8 contains our first param
+
+        // daddiu t0, zero, index
+        DWORD index = GetSectionIndex();
+        _ASSERTE(index <= 0x7F);
+        *(DWORD*)p = 0x640c0000 | index;
+        p += 4;
+
+        // move Module* -> t1
+        // ld t1, 32(t9)
+        *(DWORD*)p = 0xdf2d0020;
+        p += 4;
+
+        //nop,  only for 8byte-aligned.
+        *(DWORD*)p = 0x0;
+        p += 4;
+
+        // ld t1, 0(t1)
+        *(DWORD*)p = 0xddad0000;
+        p += 4;
+    }
+    else
+    if (IsLazyHelper())
+    {
+        // Move Module* -> a1
+        // ld a1, 24(t9)
+        *(DWORD*)p = 0xdf250018;
+        p += 4;
+
+        // ld a1, 0(a1)
+        *(DWORD*)p = 0xdca50000;
+        p += 4;
+    }
+
+    // branch to helper
+    // ld t9, ??(t9)
+    *(DWORD*)p = 0xdf390000 | ((short)(p - buffer) + 24);
+    p += 4;
+
+    // ld t9, 0(t9)
+    *(DWORD *)p = 0xdf390000;
+    p += 4;
+
+    // jr t9
+    *(DWORD *)p = 0x03200008;
+    p += 4;
+
+    // nop
+    *(DWORD*)p = 0;
     p += 4;
 
     // [Module*]

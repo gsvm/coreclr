@@ -44,6 +44,8 @@ extern PGET_GCMARKER_EXCEPTION_CODE g_getGcMarkerExceptionCode;
 #define CONTEXT_ALL_FLOATING CONTEXT_FLOATING_POINT
 #elif defined(_ARM64_)
 #define CONTEXT_ALL_FLOATING CONTEXT_FLOATING_POINT
+#elif defined(_MIPS64_)
+#define CONTEXT_ALL_FLOATING CONTEXT_FLOATING_POINT
 #else
 #error Unexpected architecture.
 #endif
@@ -166,6 +168,47 @@ typedef int __ptrace_request;
 	ASSIGN_REG(X27)     \
 	ASSIGN_REG(X28)
 
+#elif defined(_MIPS64_)
+////FIXME for MIPS. should amend and confirm.
+#define ASSIGN_CONTROL_REGS  \
+        ASSIGN_REG(Fp)      \
+        ASSIGN_REG(Sp)      \
+        ASSIGN_REG(Gp)      \
+        ASSIGN_REG(Ra)      \
+        ASSIGN_REG(Pc)
+
+
+#define ASSIGN_INTEGER_REGS \
+	ASSIGN_REG(R0)     \
+	ASSIGN_REG(At)     \
+	ASSIGN_REG(V0)     \
+	ASSIGN_REG(V1)     \
+	ASSIGN_REG(A0)     \
+	ASSIGN_REG(A1)     \
+	ASSIGN_REG(A2)     \
+	ASSIGN_REG(A3)     \
+	ASSIGN_REG(A4)     \
+	ASSIGN_REG(A5)     \
+	ASSIGN_REG(A6)     \
+	ASSIGN_REG(A7)     \
+	ASSIGN_REG(T0)     \
+	ASSIGN_REG(T1)     \
+	ASSIGN_REG(T2)     \
+	ASSIGN_REG(T3)     \
+	ASSIGN_REG(S0)     \
+	ASSIGN_REG(S1)     \
+	ASSIGN_REG(S2)     \
+	ASSIGN_REG(S3)     \
+	ASSIGN_REG(S4)     \
+	ASSIGN_REG(S5)     \
+	ASSIGN_REG(S6)     \
+	ASSIGN_REG(S7)     \
+	ASSIGN_REG(T8)     \
+	ASSIGN_REG(T9)     \
+	ASSIGN_REG(Hi)     \
+	ASSIGN_REG(Lo)
+////FIXME for MIPS: should confirm
+
 #else
 #error "Don't know how to assign registers on this architecture"
 #endif
@@ -196,7 +239,11 @@ BOOL CONTEXT_GetRegisters(DWORD processId, LPCONTEXT lpContext)
 
     if (processId == GetCurrentProcessId()) 
     {
+#ifndef _MIPS64_
         CONTEXT_CaptureContext(lpContext);
+#else
+        _ASSERT(!"unimplemented on MIPS yet");
+#endif
     }
     else
     {
@@ -429,6 +476,7 @@ void CONTEXTToNativeContext(CONST CONTEXT *lpContext, native_context_t *native)
     }
 #undef ASSIGN_REG
 
+#ifndef _MIPS64_
 #if HAVE_GREGSET_T || HAVE_GREGSET_T
 #if HAVE_GREGSET_T
     if (native->uc_mcontext.fpregs == nullptr)
@@ -441,6 +489,7 @@ void CONTEXTToNativeContext(CONST CONTEXT *lpContext, native_context_t *native)
         // whether CONTEXT_FLOATING_POINT is set in the CONTEXT's flags.
         return;
     }
+#endif
 #endif
 
     if ((lpContext->ContextFlags & CONTEXT_FLOATING_POINT) == CONTEXT_FLOATING_POINT)
@@ -538,6 +587,7 @@ void CONTEXTFromNativeContext(const native_context_t *native, LPCONTEXT lpContex
     }
 #undef ASSIGN_REG
 
+#ifndef _MIPS64_
 #if HAVE_GREGSET_T || HAVE___GREGSET_T
 #if HAVE_GREGSET_T
     if (native->uc_mcontext.fpregs == nullptr)
@@ -560,6 +610,7 @@ void CONTEXTFromNativeContext(const native_context_t *native, LPCONTEXT lpContex
         // Bail out regardless of whether the caller wanted CONTEXT_FLOATING_POINT or CONTEXT_XSTATE
         return;
     }
+#endif
 #endif
 
     if ((contextFlags & CONTEXT_FLOATING_POINT) == CONTEXT_FLOATING_POINT)
@@ -658,6 +709,9 @@ LPVOID GetNativeContextPC(const native_context_t *context)
     return (LPVOID) MCREG_Pc(context->uc_mcontext);
 #elif defined(_ARM64_)
     return (LPVOID) MCREG_Pc(context->uc_mcontext);
+#elif defined(_MIPS64_)
+////FIXME for MIPS. should amend and confirm.
+    return (LPVOID) MCREG_Pc(context->uc_mcontext);
 #else
 #   error implement me for this architecture
 #endif
@@ -685,6 +739,8 @@ LPVOID GetNativeContextSP(const native_context_t *context)
 #elif defined(_ARM_)
     return (LPVOID) MCREG_Sp(context->uc_mcontext);
 #elif defined(_ARM64_)
+    return (LPVOID) MCREG_Sp(context->uc_mcontext);
+#elif defined(_MIPS64_)
     return (LPVOID) MCREG_Sp(context->uc_mcontext);
 #else
 #   error implement me for this architecture

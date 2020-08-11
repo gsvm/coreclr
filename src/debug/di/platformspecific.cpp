@@ -35,6 +35,9 @@
 #elif DBG_TARGET_ARM64
 #include "arm64/cordbregisterset.cpp"
 #include "arm64/primitives.cpp"
+#elif DBG_TARGET_MIPS64
+#include "mips64/cordbregisterset.cpp"
+#include "mips64/primitives.cpp"
 #else
 #error Unsupported platform
 #endif

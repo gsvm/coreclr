@@ -7,6 +7,22 @@ class CrashInfo;
 #if defined(__arm__)
 #define user_regs_struct user_regs
 #define user_fpregs_struct user_fpregs
+#elif defined(__mips__)
+////FIXME for MIPS. /usr/include/sys/user.h  not define.
+//  so here defined.
+struct user_regs_struct
+{
+  unsigned long long  regs[32];
+  unsigned long long  pc;
+  unsigned long long  sp;
+  //unsigned long       fpscr;
+} __attribute__((__packed__));
+
+struct user_fpregs_struct
+{
+  unsigned long long  fpregs[32];
+  unsigned long       fpscr;//fpcsr
+} __attribute__((__packed__));
 #endif
 
 #if defined(__aarch64__)

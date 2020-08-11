@@ -470,6 +470,14 @@ void STDCALL CopyValueClassArgUnchecked(ArgDestination *argDest, void* src, Meth
         return;
     }
 
+#elif defined(_TARGET_MIPS64_)
+
+    if (argDest->IsStructPassedInRegs())
+    {
+        argDest->CopyStructToRegisters(src, pMT->GetNumInstanceFieldBytes(), destOffset);
+        return;
+    }
+
 #endif // UNIX_AMD64_ABI
     // destOffset is only valid for Nullable<T> passed in registers
     _ASSERTE(destOffset == 0);

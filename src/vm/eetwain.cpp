@@ -1456,7 +1456,7 @@ bool EECodeManager::IsGcSafe( EECodeInfo     *pCodeInfo,
     return gcInfoDecoder.IsInterruptible();
 }
 
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 bool EECodeManager::HasTailCalls( EECodeInfo     *pCodeInfo)
 {
     CONTRACTL {

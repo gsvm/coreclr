@@ -34,13 +34,29 @@ Dissecting the command:
 
 `./build.sh: command to be run in the container`
 
+Recommend to choose `aoqi/dotnet-buildtools:loongson3a-loongnix-1.0-llvm8ld` image to native build for Loongnix.
+
 If you are attempting to cross build for arm/arm64 then use the crossrootfs location to set the ROOTFS_DIR. The command would add `-e ROOTFS_DIR=<crossrootfs location>`. See [Docker Images](#Docker-Images) for the crossrootfs location. In addition you will need to specify `cross`.
 
 ```sh
 docker run --rm -v /home/dotnet-bot/coreclr:/coreclr -w /coreclr -e ROOTFS_DIR=/crossrootfs/arm64 mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-a3ae44b-20180315221921 ./build.sh arm64 cross
 ```
 
-Note that instructions on building the crossrootfs location can be found at https://github.com/dotnet/coreclr/blob/master/Documentation/building/cross-building.md. These instructions are suggested only if there are plans to change the rootfs, or the Docker images for arm/arm64 are insufficient for you build.
+If you are attempting to cross build for mips64el then use the crossrootfs location to set the ROOTFS_DIR. The command would add `-e ROOTFS_DIR=<crossrootfs location>`. See [Docker Images](#Docker-Images) for the crossrootfs location. In addition you will need to specify `cross`.
+
+For Loongnix 1.0 crossrootfs:
+
+```sh
+docker run --rm -v `pwd`:/coreclr -w /coreclr -e ROOTFS_DIR=/crossrootfs/mips64el_loongnix aoqi/dotnet-buildtools:x86_64-ubuntu-16.04-c103199-20180628134544-upstream-cross-mips64el ./build.sh ignorewarnings mips64 cross cmakeargs -DOBJCOPY=/crossrootfs/mips64el_loongnix/usr/bin/mips64el-linux-gnuabi64-objcopy
+```
+
+For Debian 9 crossrootfs:
+
+```sh
+docker run --rm -v `pwd`:/coreclr -w /coreclr -e ROOTFS_DIR=/crossrootfs/mips64el aoqi/dotnet-buildtools:x86_64-ubuntu-16.04-c103199-20180628134544-upstream-cross-mips64el ./build.sh ignorewarnings mips64 cross
+```
+
+Note that instructions on building the crossrootfs location can be found at https://github.com/dotnet/coreclr/blob/master/Documentation/building/cross-building.md. These instructions are suggested only if there are plans to change the rootfs, or the Docker images for arm/arm64 and mips64el are insufficient for you build.
 
 Docker Images
 =============
@@ -54,11 +70,15 @@ Docker Images
 | Ubuntu 16.04                | arm32(armhf)    | `mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-14.04-23cacb0-20190528233931`             | `/crossrootfs/arm`   | -             |
 | Ubuntu 16.04                | arm64 (arm64v8) | `mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-a3ae44b-20180315221921`       | `/crossrootfs/arm64` | -             |
 | Alpine                      | arm64 (arm64v8) | `mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine10fcdcf-20190208200917` | `/crossrootfs/arm64` | -clang5.0     |
+| Loongnix 1.0                | mips64el        | `aoqi/dotnet-buildtools:loongson3a-loongnix-1.0-llvm8ld`                                            | -                    | -clang8.0     |
+| Debian 9                    | mips64el        | `aoqi/dotnet-buildtools:mips64el-debian-stable`                                                     | -                    | -clang3.8     |
+| Loongnix 1.0                | mips64el        | `aoqi/dotnet-buildtools:x86_64-ubuntu-16.04-c103199-20180628134544-upstream-cross-mips64el`         | `/crossrootfs/mips64el_loongnix` | -             |
+| Debian 9                    | mips64el        | `aoqi/dotnet-buildtools:x86_64-ubuntu-16.04-c103199-20180628134544-upstream-cross-mips64el`         | `/crossrootfs/mips64el`          | -             |
 
 Environment
 ===========
 
-These instructions are written assuming the Ubuntu 16.04/18.04 LTS, since that's the distro the team uses. Pull Requests are welcome to address other environments as long as they don't break the ability to use Ubuntu 16.04/18.04 LTS.
+These instructions are written assuming the Ubuntu 16.04/18.04 LTS, since that's the distro the team uses. [Loongnix 1.0](http://ftp.loongnix.org/os/loongnix/1.0/liveinst/loongnix-1.0.2003-livecd.iso) and Debian 9, since that's the distro the Loongson team uses. Pull Requests are welcome to address other environments as long as they don't break the ability to use Ubuntu 16.04/18.04 LTS.
 
 Minimum RAM required to build is 1GB. The build is known to fail on 512 MB VMs ([Issue 536](https://github.com/dotnet/coreclr/issues/536)).
 
@@ -107,6 +127,17 @@ If you are using Fedora, then you will need to install the following packages:
 
     ~$ sudo dnf install llvm cmake clang lldb-devel libunwind-devel lttng-ust-devel libicu-devel numactl-devel
 
+If you are using Loongnix, then you will need to install the following packages:
+
+    ~$ sudo yum install cmake lttng-ust-devel libicu-devel numactl-devel
+
+And self-build [llvm-8.0](https://releases.llvm.org/8.0.0/llvm-8.0.0.src.tar.xz) and [clang-8.0](https://releases.llvm.org/8.0.0/cfe-8.0.0.src.tar.xz):
+
+     $ mv cfe-8.0.0.src llvm-8.0.0.src/tools/clang
+     $ cmake -DCMAKE_INSTALL_PREFIX=/usr -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON -DCMAKE_BUILD_TYPE=Release
+     $ make -j4
+    ~$ sudo make install
+
 Git Setup
 ---------
 
@@ -136,6 +167,19 @@ After the build is completed, there should some files placed in `bin/Product/Lin
 * `libcoreclr.so`: The CoreCLR runtime itself.
 * `System.Private.CoreLib.dll`: Microsoft Core Library.
 
+To build the runtime on Linux mips64el, run build.sh from the root of the coreclr repository:
+
+```
+./build.sh ignorewarnings
+```
+
+After the build is completed, there should some files placed in `bin/Product/Linux.mips64.Debug`.  The ones we are interested in are:
+
+* `corerun`: The command line host.  This program loads and starts the CoreCLR runtime and passes the managed program you want to run to it.
+* `libcoreclr.so`: The CoreCLR runtime itself.
+
+But there is no `System.Private.CoreLib.dll`, it needs to [cross build](https://github.com/gsvm/coreclr/blob/mips64-port/Documentation/building/cross-building.md) on Linux x86_64.
+
 Create the Core_Root
 ===================
 
@@ -146,6 +190,10 @@ The Core_Root folder will have the built binaries, from `build.sh` and it will a
 ```
 
 After the build is complete you will be able to find the output in the `bin/tests/Linux.x64.Debug/Tests/Core_Root` folder.
+
+It also needs to [cross build](https://github.com/gsvm/coreclr/blob/mips64-port/Documentation/building/cross-building.md) on Linux x86_64.
+
+After the build is complete you will be able to find the output in the `bin/tests/Linux.mips64.Debug/Tests/Core_Root` folder.
 
 Running a single test
 ===================

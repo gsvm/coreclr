@@ -73,7 +73,11 @@ SET_DEFAULT_DEBUG_CHANNEL(PROCESS); // some headers have code with asserts, so d
 #   define __NR_membarrier  389
 #  elif defined(__aarch64__)
 #   define __NR_membarrier  283
-#  elif
+#  elif defined(__mips64__)
+#pragma message("Unimplemented yet on MIPS, Loongson's Kernel unsuported 318 !!!")
+////FIXME for MIPS: Loongson's kernel not support this syscall.
+#   define __NR_membarrier  5318
+#  else
 #   error Unknown architecture
 #  endif
 # endif

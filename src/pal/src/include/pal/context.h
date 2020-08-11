@@ -112,6 +112,46 @@ using asm_sigcontext::_xstate;
 #elif HAVE_GREGSET_T
 
 #ifdef BIT64
+
+#if defined(_MIPS64_)
+////FIXME for MIPS. should amend and confirm.
+#define MCREG_R0(mc)      ((mc).gregs[0])
+#define MCREG_At(mc)      ((mc).gregs[1])
+#define MCREG_V0(mc)      ((mc).gregs[2])
+#define MCREG_V1(mc)      ((mc).gregs[3])
+#define MCREG_A0(mc)      ((mc).gregs[4])
+#define MCREG_A1(mc)      ((mc).gregs[5])
+#define MCREG_A2(mc)      ((mc).gregs[6])
+#define MCREG_A3(mc)      ((mc).gregs[7])
+#define MCREG_A4(mc)      ((mc).gregs[8])
+#define MCREG_A5(mc)      ((mc).gregs[9])
+#define MCREG_A6(mc)      ((mc).gregs[10])
+#define MCREG_A7(mc)      ((mc).gregs[11])
+#define MCREG_T0(mc)      ((mc).gregs[12])
+#define MCREG_T1(mc)      ((mc).gregs[13])
+#define MCREG_T2(mc)      ((mc).gregs[14])
+#define MCREG_T3(mc)      ((mc).gregs[15])
+#define MCREG_S0(mc)      ((mc).gregs[16])
+#define MCREG_S1(mc)      ((mc).gregs[17])
+#define MCREG_S2(mc)      ((mc).gregs[18])
+#define MCREG_S3(mc)      ((mc).gregs[19])
+#define MCREG_S4(mc)      ((mc).gregs[20])
+#define MCREG_S5(mc)      ((mc).gregs[21])
+#define MCREG_S6(mc)      ((mc).gregs[22])
+#define MCREG_S7(mc)      ((mc).gregs[23])
+#define MCREG_T8(mc)      ((mc).gregs[24])
+#define MCREG_T9(mc)      ((mc).gregs[25])
+#define MCREG_K0(mc)      ((mc).gregs[26])
+#define MCREG_K1(mc)      ((mc).gregs[27])
+#define MCREG_Gp(mc)      ((mc).gregs[28])
+#define MCREG_Sp(mc)      ((mc).gregs[29])
+#define MCREG_Fp(mc)      ((mc).gregs[30])
+#define MCREG_Ra(mc)      ((mc).gregs[31])
+#define MCREG_Pc(mc)      ((mc).pc)
+#define MCREG_Hi(mc)      ((mc).mdhi)
+#define MCREG_Lo(mc)      ((mc).mdlo)
+#endif // _MIPS64_
+
 #define MCREG_Rbx(mc)       ((mc).gregs[REG_RBX])
 #define MCREG_Rcx(mc)       ((mc).gregs[REG_RCX])
 #define MCREG_Rdx(mc)       ((mc).gregs[REG_RDX])
@@ -315,6 +355,42 @@ const fpsimd_context* GetConstNativeSigSimdContext(const native_context_t *mc)
     return GetNativeSigSimdContext(const_cast<native_context_t*>(mc));
 }
 
+#elif defined(_MIPS64_)
+#define MCREG_R0(mc)      ((mc).regs[0])
+#define MCREG_At(mc)      ((mc).regs[1])
+#define MCREG_V0(mc)      ((mc).regs[2])
+#define MCREG_V1(mc)      ((mc).regs[3])
+#define MCREG_A0(mc)      ((mc).regs[4])
+#define MCREG_A1(mc)      ((mc).regs[5])
+#define MCREG_A2(mc)      ((mc).regs[6])
+#define MCREG_A3(mc)      ((mc).regs[7])
+#define MCREG_A4(mc)      ((mc).regs[8])
+#define MCREG_A5(mc)      ((mc).regs[9])
+#define MCREG_A6(mc)      ((mc).regs[10])
+#define MCREG_A7(mc)      ((mc).regs[11])
+#define MCREG_T0(mc)      ((mc).regs[12])
+#define MCREG_T1(mc)      ((mc).regs[13])
+#define MCREG_T2(mc)      ((mc).regs[14])
+#define MCREG_T3(mc)      ((mc).regs[15])
+#define MCREG_S0(mc)      ((mc).regs[16])
+#define MCREG_S1(mc)      ((mc).regs[17])
+#define MCREG_S2(mc)      ((mc).regs[18])
+#define MCREG_S3(mc)      ((mc).regs[19])
+#define MCREG_S4(mc)      ((mc).regs[20])
+#define MCREG_S5(mc)      ((mc).regs[21])
+#define MCREG_S6(mc)      ((mc).regs[22])
+#define MCREG_S7(mc)      ((mc).regs[23])
+#define MCREG_T8(mc)      ((mc).regs[24])
+#define MCREG_T9(mc)      ((mc).regs[25])
+#define MCREG_K0(mc)      ((mc).regs[26])
+#define MCREG_K1(mc)      ((mc).regs[27])
+#define MCREG_Gp(mc)      ((mc).regs[28])
+#define MCREG_Sp(mc)      ((mc).regs[29])
+#define MCREG_Fp(mc)      ((mc).regs[30])
+#define MCREG_Ra(mc)      ((mc).regs[31])
+#define MCREG_Pc(mc)      ((mc).pc)
+#define MCREG_Hi(mc)      ((mc).mdhi)
+#define MCREG_Lo(mc)      ((mc).mdlo)
 #else
     // For FreeBSD, as found in x86/ucontext.h
 #define MCREG_Rbp(mc)	    ((mc).mc_rbp)
@@ -455,6 +531,46 @@ const VfpSigFrame* GetConstNativeSigSimdContext(const native_context_t *mc)
 #if HAVE_PT_REGS
 
 #ifdef BIT64
+
+#if defined(_MIPS64_)
+////FIXME for MIPS. should amend and confirm.
+#define PTREG_R0(ptreg)      ((ptreg).regs[0])
+#define PTREG_At(ptreg)      ((ptreg).regs[1])
+#define PTREG_V0(ptreg)      ((ptreg).regs[2])
+#define PTREG_V1(ptreg)      ((ptreg).regs[3])
+#define PTREG_A0(ptreg)      ((ptreg).regs[4])
+#define PTREG_A1(ptreg)      ((ptreg).regs[5])
+#define PTREG_A2(ptreg)      ((ptreg).regs[6])
+#define PTREG_A3(ptreg)      ((ptreg).regs[7])
+#define PTREG_A4(ptreg)      ((ptreg).regs[8])
+#define PTREG_A5(ptreg)      ((ptreg).regs[9])
+#define PTREG_A6(ptreg)      ((ptreg).regs[10])
+#define PTREG_A7(ptreg)      ((ptreg).regs[11])
+#define PTREG_T0(ptreg)      ((ptreg).regs[12])
+#define PTREG_T1(ptreg)      ((ptreg).regs[13])
+#define PTREG_T2(ptreg)      ((ptreg).regs[14])
+#define PTREG_T3(ptreg)      ((ptreg).regs[15])
+#define PTREG_S0(ptreg)      ((ptreg).regs[16])
+#define PTREG_S1(ptreg)      ((ptreg).regs[17])
+#define PTREG_S2(ptreg)      ((ptreg).regs[18])
+#define PTREG_S3(ptreg)      ((ptreg).regs[19])
+#define PTREG_S4(ptreg)      ((ptreg).regs[20])
+#define PTREG_S5(ptreg)      ((ptreg).regs[21])
+#define PTREG_S6(ptreg)      ((ptreg).regs[22])
+#define PTREG_S7(ptreg)      ((ptreg).regs[23])
+#define PTREG_T8(ptreg)      ((ptreg).regs[24])
+#define PTREG_T9(ptreg)      ((ptreg).regs[25])
+#define PTREG_K0(ptreg)      ((ptreg).regs[26])
+#define PTREG_K1(ptreg)      ((ptreg).regs[27])
+#define PTREG_Gp(ptreg)      ((ptreg).regs[28])
+#define PTREG_Sp(ptreg)      ((ptreg).regs[29])
+#define PTREG_Fp(ptreg)      ((ptreg).regs[30])
+#define PTREG_Ra(ptreg)      ((ptreg).regs[31])
+#define PTREG_Pc(ptreg)      ((ptreg).cp0_epc)
+#define PTREG_Hi(ptreg)      ((ptreg).hi)
+#define PTREG_Lo(ptreg)      ((ptreg).lo)
+#endif // _MIPS64_
+
 #define PTREG_Rbx(ptreg)    ((ptreg).rbx)
 #define PTREG_Rcx(ptreg)    ((ptreg).rcx)
 #define PTREG_Rdx(ptreg)    ((ptreg).rdx)
@@ -576,6 +692,8 @@ inline static DWORD64 CONTEXTGetPC(LPCONTEXT pContext)
     return pContext->Eip;
 #elif defined(_ARM64_) || defined(_ARM_)
     return pContext->Pc;
+#elif defined(_MIPS64_)
+    return pContext->Pc;
 #else
 #error "don't know how to get the program counter for this architecture"
 #endif
@@ -588,6 +706,9 @@ inline static void CONTEXTSetPC(LPCONTEXT pContext, DWORD64 pc)
 #elif defined(_X86_)
     pContext->Eip = pc;
 #elif defined(_ARM64_) || defined(_ARM_)
+    pContext->Pc = pc;
+#elif defined(_MIPS64_)
+////FIXME for MIPS. should amend and confirm.
     pContext->Pc = pc;
 #else
 #error "don't know how to set the program counter for this architecture"
@@ -604,6 +725,8 @@ inline static DWORD64 CONTEXTGetFP(LPCONTEXT pContext)
     return pContext->R7;
 #elif defined(_ARM64_)
     return pContext->Fp;
+#elif defined(_MIPS64_)
+    return pContext->Fp;//s8
 #else
 #error "don't know how to get the frame pointer for this architecture"
 #endif

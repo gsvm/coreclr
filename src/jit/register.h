@@ -104,6 +104,9 @@ REGDEF(STK,    16+XMMBASE,  0x0000,       "STK"  )
 #elif defined(_TARGET_ARM64_)
  #include "registerarm64.h"
 
+#elif defined(_TARGET_MIPS64_)
+ #include "registermips64.h"
+
 #else
   #error Unsupported or unset target architecture
 #endif // target type

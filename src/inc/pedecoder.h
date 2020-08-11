@@ -81,6 +81,8 @@ inline CHECK CheckOverflow(RVA value1, COUNT_T value2)
 #define IMAGE_FILE_MACHINE_NATIVE   IMAGE_FILE_MACHINE_ARMNT
 #elif defined(_TARGET_ARM64_)
 #define IMAGE_FILE_MACHINE_NATIVE   IMAGE_FILE_MACHINE_ARM64
+#elif defined(_TARGET_MIPS64_)
+#define IMAGE_FILE_MACHINE_NATIVE   IMAGE_FILE_MACHINE_MIPS64
 #else
 #error "port me"
 #endif

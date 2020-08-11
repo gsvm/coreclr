@@ -616,6 +616,11 @@ case $CPUName in
         __HostArch=arm64
         ;;
 
+    mips64)
+        __BuildArch=mips64
+        __HostArch=mips64
+        ;;
+
     *)
         echo "Unknown CPU $CPUName detected, configuring as if for x64"
         __BuildArch=x64
@@ -738,6 +743,10 @@ while :; do
 
         arm64)
             __BuildArch=arm64
+            ;;
+
+        mips64)
+            __BuildArch=mips64
             ;;
 
         debug)

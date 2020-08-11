@@ -893,6 +893,11 @@ public:
     bool ClassifyEightBytes(SystemVStructRegisterPassingHelperPtr helperPtr, unsigned int nestingLevel, unsigned int startOffsetOfStruct, bool isNativeStruct);
 #endif // defined(UNIX_AMD64_ABI_ITF)
 
+#if defined(_TARGET_MIPS64_)
+    // Builds the internal data structures and classifies struct eightbytes for MIPS64 calling convention.
+    void ClassifyEightBytes(MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr, bool useNativeLayout);
+#endif // defined(_Target_MIPS64_)
+
     // Copy m_dwFlags from another method table
     void CopyFlags(MethodTable * pOldMT)
     {
@@ -932,6 +937,11 @@ private:
     bool ClassifyEightBytesWithManagedLayout(SystemVStructRegisterPassingHelperPtr helperPtr, unsigned int nestingLevel, unsigned int startOffsetOfStruct, bool isNativeStruct);
     bool ClassifyEightBytesWithNativeLayout(SystemVStructRegisterPassingHelperPtr helperPtr, unsigned int nestingLevel, unsigned int startOffsetOfStruct, bool isNativeStruct);
 #endif // defined(UNIX_AMD64_ABI_ITF)
+
+#if defined(_TARGET_MIPS64_)
+    void ClassifyEightBytesWithManagedLayout(MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr);
+    void ClassifyEightBytesWithNativeLayout(MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr);
+#endif // _TARGET_MIPS64_
 
     DWORD   GetClassIndexFromToken(mdTypeDef typeToken)
     {

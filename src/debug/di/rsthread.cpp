@@ -8828,6 +8828,8 @@ HRESULT CordbJITILFrame::GetReturnValueForType(CordbType *pType, ICorDebugValue 
     const CorDebugRegister floatRegister = REGISTER_ARM64_V0;
 #elif  defined(DBG_TARGET_ARM)
     const CorDebugRegister floatRegister = REGISTER_ARM_D0;
+#elif  defined(DBG_TARGET_MIPS64)
+    const CorDebugRegister floatRegister = REGISTER_MIPS64_F0;
 #endif
     
 #if defined(DBG_TARGET_X86)
@@ -8840,7 +8842,8 @@ HRESULT CordbJITILFrame::GetReturnValueForType(CordbType *pType, ICorDebugValue 
 #elif  defined(DBG_TARGET_ARM)
     const CorDebugRegister ptrRegister = REGISTER_ARM_R0;
     const CorDebugRegister ptrHighWordRegister = REGISTER_ARM_R1;
-
+#elif  defined(DBG_TARGET_MIPS64)
+    const CorDebugRegister ptrRegister = REGISTER_MIPS64_V0;
 #endif
 
     CorElementType corReturnType = pType->GetElementType();

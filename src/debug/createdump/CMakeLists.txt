@@ -41,11 +41,23 @@ _add_executable(createdump
 
 add_dependencies(createdump pal_redefines_file)
 
+if(NOT CLR_CMAKE_TARGET_ARCH_MIPS64)
 target_link_libraries(createdump
     createdump_lib
     # share the PAL/corguids in the dac module
     mscordaccore
 )
+else()
+target_link_libraries(createdump
+    createdump_lib
+    # share the PAL/corguids in the dac module
+    pthread
+    rt
+    lzma
+    dl
+    mscordaccore
+)
+endif()
 
 add_dependencies(createdump mscordaccore)
 

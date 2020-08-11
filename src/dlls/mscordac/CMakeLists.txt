@@ -49,6 +49,9 @@ else(WIN32)
 
         if (CLR_CMAKE_PLATFORM_ARCH_ARM OR CLR_CMAKE_PLATFORM_ARCH_ARM64)
             set(JUMP_INSTRUCTION b)
+        elseif (CLR_CMAKE_PLATFORM_ARCH_MIPS64)
+            # FIXME for MIPS
+            set(JUMP_INSTRUCTION "break //TODO, b")
         else()
             set(JUMP_INSTRUCTION jmp)
         endif()

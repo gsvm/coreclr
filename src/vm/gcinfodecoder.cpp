@@ -127,7 +127,7 @@ GcInfoDecoder::GcInfoDecoder(
     int hasStackBaseRegister   = headerFlags & GC_INFO_HAS_STACK_BASE_REGISTER;
 #ifdef _TARGET_AMD64_
     m_WantsReportOnlyLeaf      = ((headerFlags & GC_INFO_WANTS_REPORT_ONLY_LEAF) != 0);
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     m_HasTailCalls             = ((headerFlags & GC_INFO_HAS_TAILCALLS) != 0);
 #endif // _TARGET_AMD64_
     int hasSizeOfEditAndContinuePreservedArea = headerFlags & GC_INFO_HAS_EDIT_AND_CONTINUE_PRESERVED_SLOTS;
@@ -372,7 +372,7 @@ bool GcInfoDecoder::IsSafePoint(UINT32 codeOffset)
     if(m_NumSafePoints == 0)
         return false;
 
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     // Safepoints are encoded with a -1 adjustment
     codeOffset--;
 #endif
@@ -392,7 +392,7 @@ UINT32 GcInfoDecoder::FindSafePoint(UINT32 breakOffset)
     const UINT32 numBitsPerOffset = CeilOfLog2(NORMALIZE_CODE_OFFSET(m_CodeLength));
     UINT32 result = m_NumSafePoints;
 
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     // Safepoints are encoded with a -1 adjustment
     // but normalizing them masks off the low order bit
     // Thus only bother looking if the address is odd
@@ -439,7 +439,7 @@ void GcInfoDecoder::EnumerateSafePoints(EnumerateSafePointsCallback *pCallback, 
         UINT32 normOffset = (UINT32)m_Reader.Read(numBitsPerOffset);
         UINT32 offset = DENORMALIZE_CODE_OFFSET(normOffset) + 2;
 
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         // Safepoints are encoded with a -1 adjustment
         offset--;
 #endif
@@ -531,7 +531,7 @@ bool GcInfoDecoder::GetIsVarArg()
     return m_IsVarArg;
 }
 
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 bool GcInfoDecoder::HasTailCalls()
 {
     _ASSERTE( m_Flags & DECODE_HAS_TAILCALLS );
@@ -1705,6 +1705,127 @@ OBJECTREF* GcInfoDecoder::GetCapturedRegister(
 }
 #endif // FEATURE_PAL
 
+#elif defined(_TARGET_MIPS64_)
+
+#pragma message("unimplemented on MIPS yet")
+
+#ifdef FEATURE_PAL
+OBJECTREF* GcInfoDecoder::GetCapturedRegister(
+    int             regNum,
+    PREGDISPLAY     pRD
+    )
+{
+    _ASSERTE(regNum >= 0 && regNum <= 31);
+
+    // The fields of CONTEXT are in the same order as
+    // the processor encoding numbers.
+
+    DWORD64 *pR0 = &pRD->pCurrentContext->R0;
+
+    return (OBJECTREF*)(pR0 + regNum);
+}
+#endif // FEATURE_PAL
+
+OBJECTREF* GcInfoDecoder::GetRegisterSlot(
+                        int             regNum,
+                        PREGDISPLAY     pRD
+                        )
+{
+    ////PORTABILITY_ASSERT("GcInfoDecoder::GetRegisterSlot, MIPS.");
+    _ASSERTE(regNum >= 1 && regNum <= 31);
+
+    DWORD64 **ppReg;
+
+    if (regNum < 16) //t3
+    {
+        ppReg = &pRD->volatileCurrContextPointers.At;
+        return (OBJECTREF*)*(ppReg + (regNum-1));
+    }
+    else if (regNum == 24) //t8
+    {
+        return (OBJECTREF*)(pRD->volatileCurrContextPointers.T8);
+    }
+    else if (regNum == 25) //t9
+    {
+        return (OBJECTREF*)(pRD->volatileCurrContextPointers.T9);
+    }
+    else if(regNum == 30)
+    {
+        //return (OBJECTREF*) pRD->pCurrentContextPointers->Fp;
+        return (OBJECTREF*) &pRD->pCurrentContext->Fp;
+    }
+    else if(regNum == 31)
+    {
+        //return (OBJECTREF*) pRD->pCurrentContextPointers->Ra;
+        return (OBJECTREF*) &pRD->pCurrentContext->Ra;
+    }
+
+    ppReg = &pRD->pCurrentContextPointers->S0;
+
+    return (OBJECTREF*)*(ppReg + (regNum-16));
+}
+
+bool GcInfoDecoder::IsScratchRegister(int regNum,  PREGDISPLAY pRD)
+{
+	/* FIXME for MIPS: ScratchRegisters? */
+    //PORTABILITY_ASSERT("GcInfoDecoder::IsScratchRegister, MIPS.");
+    _ASSERTE(regNum >= 0 && regNum <= 31);
+    _ASSERTE(regNum != 29);
+
+    return regNum <= 15 || regNum >= 30 || regNum == 24 || regNum == 25;
+}
+
+bool GcInfoDecoder::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY     pRD)
+{
+#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
+    _ASSERTE( m_Flags & DECODE_GC_LIFETIMES );
+
+    TADDR pSlot = (TADDR) GetStackSlot(spOffset, spBase, pRD);
+    _ASSERTE(pSlot >= pRD->SP);
+
+    return (pSlot < pRD->SP + m_SizeOfStackOutgoingAndScratchArea);
+#else
+    return FALSE;
+#endif
+}
+
+void GcInfoDecoder::ReportRegisterToGC(
+                                int             regNum,
+                                unsigned        gcFlags,
+                                PREGDISPLAY     pRD,
+                                unsigned        flags,
+                                GCEnumCallback  pCallBack,
+                                void *          hCallBack)
+{
+    GCINFODECODER_CONTRACT;
+
+    //_ASSERTE(regNum != 1);
+    _ASSERTE(regNum > 0 && regNum <= 31);
+
+    LOG((LF_GCROOTS, LL_INFO1000, "Reporting " FMT_REG, regNum ));
+
+    OBJECTREF* pObjRef = GetRegisterSlot( regNum, pRD );
+
+#ifdef _DEBUG
+    if(IsScratchRegister(regNum, pRD))
+    {
+        // Scratch registers cannot be reported for non-leaf frames
+        _ASSERTE(flags & ActiveStackFrame);
+    }
+
+    LOG((LF_GCROOTS, LL_INFO1000, /* Part Two */
+         "at" FMT_ADDR "as ", DBG_ADDR(pObjRef) ));
+
+    VALIDATE_ROOT((gcFlags & GC_CALL_INTERIOR), hCallBack, pObjRef);
+
+    LOG_PIPTR(pObjRef, gcFlags, hCallBack);
+#endif //_DEBUG
+
+    gcFlags |= CHECK_APP_DOMAIN;
+
+    pCallBack(hCallBack, pObjRef, gcFlags DAC_ARG(DacSlotLocation(regNum, 0, false)));
+}
+
 #else // Unknown platform
 
 OBJECTREF* GcInfoDecoder::GetRegisterSlot(
@@ -1795,6 +1916,8 @@ int GcInfoDecoder::GetStackReg(int spBase)
     int esp = 13;
 #elif defined(_TARGET_ARM64_)
     int esp = 31;
+#elif defined(_TARGET_MIPS64_)
+    int esp = 29;
 #endif
 
     if( GC_SP_REL == spBase )

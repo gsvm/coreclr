@@ -427,9 +427,9 @@ public:
 
     unsigned char lvIsTemp : 1; // Short-lifetime compiler temp
 
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     unsigned char lvIsImplicitByRef : 1; // Set if the argument is an implicit byref.
-#endif                                   // defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#endif // defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 
 #if OPT_BOOL_OPS
     unsigned char lvIsBoolean : 1; // set if variable is boolean
@@ -563,11 +563,14 @@ public:
     {
         assert(lvIsHfa());
         assert(varTypeIsStruct(lvType));
+#if defined(_TARGET_MIPS64_)
+        assert(!"lvHfaSlots called not support on MIPS64!");
+#endif
         unsigned slots = 0;
 #ifdef _TARGET_ARM_
         slots = lvExactSize / sizeof(float);
         assert(slots <= 8);
-#elif defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM64_) || (defined(_TARGET_MIPS64_) && defined(FEATURE_HFA))
         switch (_lvHfaElemKind)
         {
             case HFA_ELEM_NONE:
@@ -582,6 +585,9 @@ public:
                 slots = lvExactSize >> 3;
                 break;
             case HFA_ELEM_SIMD16:
+#if defined(_TARGET_MIPS64_)
+                assert(!"lvHfaSlots called not support SIMD16 on MIPS64");
+#endif
                 assert((lvExactSize % 16) == 0);
                 slots = lvExactSize >> 4;
                 break;
@@ -1284,7 +1290,7 @@ struct FuncInfoDsc
     emitLocation* coldEndLoc;
 #endif // _TARGET_UNIX_
 
-#elif defined(_TARGET_ARMARCH_)
+#elif defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
 
     UnwindInfo  uwi;     // Unwind information for this function/funclet's hot  section
     UnwindInfo* uwiCold; // Unwind information for this function/funclet's cold section
@@ -1301,7 +1307,7 @@ struct FuncInfoDsc
     emitLocation* coldEndLoc;
 #endif // _TARGET_UNIX_
 
-#endif // _TARGET_ARMARCH_
+#endif
 
 #if defined(_TARGET_UNIX_)
     jitstd::vector<CFI_CODE>* cfiCodes;
@@ -1388,6 +1394,10 @@ public:
 
 #if defined(UNIX_AMD64_ABI)
     SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR structDesc;
+#endif
+
+#if defined(_TARGET_MIPS64_)
+    MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR structDesc;
 #endif
 
     void setRegNum(unsigned int i, regNumber regNum)
@@ -1603,11 +1613,11 @@ public:
     }
 
     // Set the register numbers for a multireg argument.
-    // There's nothing to do on x64/Ux because the structDesc has already been used to set the
+    // There's nothing to do on x64/Ux(also MIPS64) because the structDesc has already been used to set the
     // register numbers.
     void SetMultiRegNums()
     {
-#if FEATURE_MULTIREG_ARGS && !defined(UNIX_AMD64_ABI)
+#if FEATURE_MULTIREG_ARGS && !defined(UNIX_AMD64_ABI) && !defined(_TARGET_MIPS64_)
         if (numRegs == 1)
         {
             return;
@@ -1624,7 +1634,7 @@ public:
             argReg = (regNumber)(argReg + regSize);
             setRegNum(regIndex, argReg);
         }
-#endif // FEATURE_MULTIREG_ARGS && !defined(UNIX_AMD64_ABI)
+#endif // FEATURE_MULTIREG_ARGS && !defined(UNIX_AMD64_ABI) && !defined(_TARGET_MIPS64_)
     }
 
     // Check that the value of 'isStruct' is consistent.
@@ -1730,6 +1740,19 @@ public:
                              const regNumber                                                  otherRegNum,
                              const SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* const structDescPtr = nullptr);
 #endif // UNIX_AMD64_ABI
+
+#if defined(_TARGET_MIPS64_)
+    fgArgTabEntry* AddRegArg(unsigned                                                  argNum,
+                             GenTree*                                                  node,
+                             GenTree*                                                  parent,
+                             regNumber                                                 regNum,
+                             unsigned                                                  numRegs,
+                             unsigned                                                  alignment,
+                             const bool                                                isStruct,
+                             const bool                                                isVararg,
+                             regNumber*                                                nextRegNumArr,
+                             const MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* const structDescPtr = nullptr);
+#endif // _TARGET_MIPS64_
 
     fgArgTabEntry* AddStkArg(unsigned argNum,
                              GenTree* node,
@@ -2012,6 +2035,12 @@ public:
 #ifdef ARM_SOFTFP
     bool isSingleFloat32Struct(CORINFO_CLASS_HANDLE hClass);
 #endif // ARM_SOFTFP
+
+#ifdef _TARGET_MIPS64_
+    bool isSingleFloat32Struct(CORINFO_CLASS_HANDLE hClass);
+    bool isTwoFloatStruct(CORINFO_CLASS_HANDLE clsHnd);
+    bool isTwoDoubleStruct(CORINFO_CLASS_HANDLE clsHnd);
+#endif // _TARGET_MIPS64_
 
     //-------------------------------------------------------------------------
     // Functions to handle homogeneous floating-point aggregates (HFAs) in ARM.
@@ -2884,6 +2913,9 @@ public:
     unsigned   lvaRefCount; // total number of references to locals
     LclVarDsc* lvaTable;    // variable descriptor table
     unsigned   lvaTableCnt; // lvaTable size (>= lvaCount)
+#ifdef _TARGET_MIPS64_
+    unsigned   lvaArgSize;  // total arg size on frame (>= lvaCount)
+#endif
 
     LclVarDsc** lvaRefSorted; // table sorted by refcount
 
@@ -3172,7 +3204,7 @@ public:
     // For ARM64, this is structs larger than 16 bytes that are passed by reference.
     bool lvaIsImplicitByRefLocal(unsigned varNum)
     {
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         LclVarDsc* varDsc = lvaGetDesc(varNum);
         if (varDsc->lvIsImplicitByRef)
         {
@@ -3181,7 +3213,7 @@ public:
             assert(varTypeIsStruct(varDsc) || (varDsc->lvType == TYP_BYREF));
             return true;
         }
-#endif // defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#endif // defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         return false;
     }
 
@@ -6979,6 +7011,10 @@ public:
 #elif defined(_TARGET_ARM64_)
             reg     = REG_R11;
             regMask = RBM_R11;
+#elif defined(_TARGET_MIPS64_)
+            /* FIXME for MIPS: should confirm. */
+            reg     = REG_T8;
+            regMask = RBM_T8;
 #else
 #error Unsupported or unset target architecture
 #endif
@@ -7094,6 +7130,12 @@ public:
         /*IN*/ CORINFO_CLASS_HANDLE                                  structHnd,
         /*OUT*/ SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr);
 #endif // UNIX_AMD64_ABI
+
+#if defined(_TARGET_MIPS64_)
+    void eeGetMIPS64PassStructInRegisterDescriptor(
+        /*IN*/ CORINFO_CLASS_HANDLE                                  structHnd,
+        /*OUT*/ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr);
+#endif // _TARGET_MIPS64_
 
     template <typename ParamType>
     bool eeRunWithErrorTrap(void (*function)(ParamType*), ParamType* param)
@@ -7401,6 +7443,13 @@ public:
     void unwindReturn(regNumber reg);                                             // ret lr
 #endif                                                                            // defined(_TARGET_ARM64_)
 
+#if defined(_TARGET_MIPS64_)
+    void unwindNop();
+    void unwindPadding(); // Generate a sequence of unwind NOP codes representing instructions between the last
+                          // instruction and the current location.
+    void unwindSaveReg(regNumber reg, int offset);
+    void unwindReturn(regNumber reg); // jr  ra
+#endif // defined(_TARGET_MIPS64_)
     //
     // Private "helper" functions for the unwind implementation.
     //
@@ -8455,6 +8504,12 @@ public:
         int compJitSaveFpLrWithCalleeSavedRegisters;
 #endif // defined(_TARGET_ARM64_)
 
+#if defined(_TARGET_MIPS64_)
+        // Decision about whether to save FP/RA registers with callee-saved registers (see
+        // COMPlus_JitSaveFpRaWithCalleSavedRegisters).
+        int compJitSaveFpRaWithCalleeSavedRegisters;
+#endif // defined(_TARGET_ARM64_)
+
 #ifdef ARM_SOFTFP
         static const bool compUseSoftFP = true;
 #else // !ARM_SOFTFP
@@ -8730,6 +8785,8 @@ public:
 
 #define CPU_ARM 0x0300   // The generic ARM CPU
 #define CPU_ARM64 0x0400 // The generic ARM64 CPU
+
+#define CPU_MIPS64 0x0800 // The generic MIPS64 CPU
 
         unsigned genCPU; // What CPU are we running on
     } info;
@@ -9065,7 +9122,7 @@ protected:
     void compSetProcessor();
     void compInitDebuggingInfo();
     void compSetOptimizationLevel();
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
     bool compRsvdRegCheck(FrameLayoutState curState);
 #endif
     void compCompile(void** methodCodePtr, ULONG* methodCodeSize, JitFlags* compileFlags);
@@ -10386,6 +10443,19 @@ const instruction INS_SQRT = INS_fsqrt;
 
 #endif // _TARGET_ARM64_
 
+#ifdef _TARGET_MIPS64_
+
+const instruction INS_BREAKPOINT = INS_break;
+/* FIXME for MIPS: should confirm */
+const instruction INS_MULADD     = INS_madd;
+
+/* FIXME for MIPS: should confirm */
+const instruction INS_ABS  = INS_break;
+const instruction INS_SQRT = INS_break;
+//const instruction INS_ABS  = INS_abs;
+//const instruction INS_SQRT = INS_sqrt;
+
+#endif // _TARGET_MIPS64_
 /*****************************************************************************/
 
 extern const BYTE genTypeSizes[];

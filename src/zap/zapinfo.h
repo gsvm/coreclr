@@ -548,6 +548,10 @@ public:
         /*IN*/  CORINFO_CLASS_HANDLE _structHnd,
         /*OUT*/ SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr);
 
+    void getMIPS64PassStructInRegisterDescriptor(
+        /*IN*/  CORINFO_CLASS_HANDLE _structHnd,
+        /*OUT*/ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr);
+
     unsigned getClassNumInstanceFields(CORINFO_CLASS_HANDLE cls);
 
     CorInfoHelpFunc getNewHelper(CORINFO_RESOLVED_TOKEN * pResolvedToken, CORINFO_METHOD_HANDLE callerHandle, bool * pHasSideEffects = NULL);

@@ -486,7 +486,7 @@ GcInfoEncoder::GcInfoEncoder(
     m_ReversePInvokeFrameSlot = NO_REVERSE_PINVOKE_FRAME;
 #ifdef _TARGET_AMD64_
     m_WantsReportOnlyLeaf = false;
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     m_HasTailCalls = false;
 #endif // _TARGET_AMD64_
     m_IsVarArg = false;
@@ -758,7 +758,7 @@ void GcInfoEncoder::SetWantsReportOnlyLeaf()
 {
     m_WantsReportOnlyLeaf = true;
 }
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 void GcInfoEncoder::SetHasTailCalls()
 {
     m_HasTailCalls = true;
@@ -1008,7 +1008,7 @@ void GcInfoEncoder::Build()
         (m_SizeOfEditAndContinuePreservedArea == NO_SIZE_OF_EDIT_AND_CONTINUE_PRESERVED_AREA) && 
 #ifdef _TARGET_AMD64_
         !m_WantsReportOnlyLeaf &&
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         !m_HasTailCalls &&
 #endif // _TARGET_AMD64_
         !IsStructReturnKind(m_ReturnKind);
@@ -1034,7 +1034,7 @@ void GcInfoEncoder::Build()
         GCINFO_WRITE(m_Info1, ((m_StackBaseRegister != NO_STACK_BASE_REGISTER) ? 1 : 0), 1, FlagsSize);
 #ifdef _TARGET_AMD64_
         GCINFO_WRITE(m_Info1, (m_WantsReportOnlyLeaf ? 1 : 0), 1, FlagsSize);
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         GCINFO_WRITE(m_Info1, (m_HasTailCalls ? 1 : 0), 1, FlagsSize);
 #endif // _TARGET_AMD64_
         GCINFO_WRITE(m_Info1, ((m_SizeOfEditAndContinuePreservedArea != NO_SIZE_OF_EDIT_AND_CONTINUE_PRESERVED_AREA) ? 1 : 0), 1, FlagsSize);

@@ -55,9 +55,20 @@ add_library(coreclrtraceptprovider
 
 find_library(LTTNG NAMES lttng-ust)
 
-target_link_libraries(coreclrtraceptprovider
-                      ${LTTNG}
-)
+if(NOT CLR_CMAKE_TARGET_ARCH_MIPS64)
+  target_link_libraries(coreclrtraceptprovider
+                        ${LTTNG}
+  )
+else()
+  target_link_libraries(coreclrtraceptprovider
+                        lttng-ust-tracepoint
+                        urcu
+                        urcu-bp
+                        urcu-cds
+                        urcu-common
+                        ${LTTNG}
+  )
+endif()
 
 set_target_properties(coreclrtraceptprovider PROPERTIES LINKER_LANGUAGE CXX)
 

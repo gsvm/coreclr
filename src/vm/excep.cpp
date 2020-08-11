@@ -6893,6 +6893,9 @@ AdjustContextForWriteBarrier(
        // Now we save the address back into the context so that it gets used
        // as the faulting address.
        SetIP(pContext, ControlPCPostAdjustment);
+#elif defined(_TARGET_MIPS64_)
+       //FIXME for MIPS:
+       _ASSERTE(!"FIXME: Not Implements on mips64!!");
 #endif // _TARGET_ARM_ || _TARGET_ARM64_
 
         // Unwind the frame chain - On Win64, this is required since we may handle the managed fault and to do so,

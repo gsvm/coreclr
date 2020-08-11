@@ -2891,6 +2891,28 @@ bool Compiler::gtMarkAddrMode(GenTree* addr, int* pCostEx, int* pCostSz, var_typ
                 *pCostSz += 4;
             }
         }
+#elif defined(_TARGET_MIPS64_)
+        /* FIXME for MIPS */
+        if (base)
+        {
+            *pCostEx += base->gtCostEx;
+            *pCostSz += base->gtCostSz;
+        }
+
+        if (idx)
+        {
+            *pCostEx += idx->gtCostEx;
+            *pCostSz += idx->gtCostSz;
+        }
+
+        if (cns != 0)
+        {
+            if (cns >= (4096 * genTypeSize(type)))
+            {
+                *pCostEx += 1;
+                *pCostSz += 4;
+            }
+        }
 #else
 #error "Unknown _TARGET_"
 #endif
@@ -3185,6 +3207,10 @@ unsigned Compiler::gtSetEvalOrder(GenTree* tree)
                 costEx = 1;
                 goto COMMON_CNS;
 
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+#pragma  message("Unimplemented yet MIPS64")
+            assert(!"unimplemented yet on MIPS");
 #else
             case GT_CNS_LNG:
             case GT_CNS_STR:
@@ -3192,7 +3218,7 @@ unsigned Compiler::gtSetEvalOrder(GenTree* tree)
 #error "Unknown _TARGET_"
 #endif
 
-            COMMON_CNS:
+            COMMON_CNS:/* FIXME for MIPS: not used ??? */
                 /*
                     Note that some code below depends on constants always getting
                     moved to be the second operand of a binary operator. This is
@@ -3379,6 +3405,15 @@ unsigned Compiler::gtSetEvalOrder(GenTree* tree)
                         /* cast involving floats always go through memory */
                         costEx = IND_COST_EX * 2;
                         costSz = 6;
+                    }
+#elif defined(_TARGET_MIPS64_)
+                    /* FIXME for MIPS */
+                    costEx = 1;
+                    costSz = 2;
+                    if (isflt || varTypeIsFloating(op1->TypeGet()))
+                    {
+                        costEx = 2;
+                        costSz = 4;
                     }
 #else
 #error "Unknown _TARGET_"
@@ -3917,6 +3952,7 @@ unsigned Compiler::gtSetEvalOrder(GenTree* tree)
                 {
                     costEx += 3;
 #ifndef _TARGET_64BIT_
+
                     // Variable sized LONG shifts require the use of a helper call
                     //
                     if (tree->gtType == TYP_LONG)
@@ -18113,6 +18149,32 @@ void ReturnTypeDesc::InitializeStructReturnType(Compiler* comp, CORINFO_CLASS_HA
                 m_regType[i] = comp->getJitGCType(gcPtrs[i]);
             }
 
+#elif defined(_TARGET_MIPS64_)
+
+            // a non-HFA struct returned using two registers
+            //
+            assert((structSize >= TARGET_POINTER_SIZE) && (structSize <= (2 * TARGET_POINTER_SIZE)));
+
+            if (comp->isTwoFloatStruct(retClsHnd))
+            {
+                m_regType[0] = TYP_FLOAT;
+                m_regType[1] = TYP_FLOAT;
+            }
+            else if (comp->isTwoDoubleStruct(retClsHnd))
+            {
+                m_regType[0] = TYP_DOUBLE;
+                m_regType[1] = TYP_DOUBLE;
+            }
+            else
+            {
+                BYTE gcPtrs[2] = {TYPE_GC_NONE, TYPE_GC_NONE};
+                comp->info.compCompHnd->getClassGClayout(retClsHnd, &gcPtrs[0]);
+                for (unsigned i = 0; i < 2; ++i)
+                {
+                    m_regType[i] = comp->getJitGCType(gcPtrs[i]);
+                }
+            }
+
 #else //  _TARGET_XXX_
 
             // This target needs support here!
@@ -18295,6 +18357,19 @@ regNumber ReturnTypeDesc::GetABIReturnReg(unsigned idx)
     {
         noway_assert(idx < 4);                                   // Up to 4 return registers for HFA's
         resultReg = (regNumber)((unsigned)(REG_FLOATRET) + idx); // V0, V1, V2 or V3
+    }
+
+#elif defined(_TARGET_MIPS64_)
+    var_types regType = GetReturnRegType(idx);
+    if (varTypeIsIntegralOrI(regType))
+    {
+        noway_assert(idx < 2);                              // Up to 2 return registers for 16-byte structs
+        resultReg = (idx == 0) ? REG_INTRET : REG_INTRET_1; // V0 or V1
+    }
+    else
+    {
+        noway_assert(idx < 2);                                  // Up to 2 return registers for two-float-field structs
+        resultReg = (idx == 0) ? REG_FLOATRET : REG_FLOATRET_1; // F0 or F2
     }
 
 #endif // TARGET_XXX

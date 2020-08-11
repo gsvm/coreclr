@@ -84,6 +84,7 @@ enum _tagPEKIND
         peAMD64	= 0x4,
         peARM	= 0x5,
         peARM64	= 0x6,
+        peMIPS64	= 0x7,
         peInvalid	= 0xffffffff
     } 	PEKIND;
 

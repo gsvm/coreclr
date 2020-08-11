@@ -126,14 +126,14 @@ bool StrongNameIsValidPublicKey(const PublicKeyBlob &keyPublicKey)
     // If a hash algorithm is specified, it must be a sensible value
     bool fHashAlgorithmValid = GET_ALG_CLASS(GET_UNALIGNED_VAL32(&keyPublicKey.HashAlgID)) == ALG_CLASS_HASH &&
                                GET_ALG_SID(GET_UNALIGNED_VAL32(&keyPublicKey.HashAlgID)) >= ALG_SID_SHA1;
-    if (keyPublicKey.HashAlgID != 0 && !fHashAlgorithmValid)
+    if (GET_UNALIGNED_VAL32(&keyPublicKey.HashAlgID) != 0 && !fHashAlgorithmValid)
     {
         return false;
     }
 
     // If a signature algorithm is specified, it must be a sensible value
     bool fSignatureAlgorithmValid = GET_ALG_CLASS(GET_UNALIGNED_VAL32(&keyPublicKey.SigAlgID)) == ALG_CLASS_SIGNATURE;
-    if (keyPublicKey.SigAlgID != 0 && !fSignatureAlgorithmValid)
+    if (GET_UNALIGNED_VAL32(&keyPublicKey.SigAlgID) != 0 && !fSignatureAlgorithmValid)
     {
         return false;
     }

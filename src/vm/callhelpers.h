@@ -704,6 +704,7 @@ enum DispatchCallSimpleFlags
 #define ARGNUM_5 ARGNUM_N(5)
 #define ARGNUM_6 ARGNUM_N(6)
 #define ARGNUM_7 ARGNUM_N(7)
+////FIXME for MIPS.
 #define ARGNUM_8 ARGNUM_N(8)
 
 

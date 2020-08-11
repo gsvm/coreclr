@@ -2389,6 +2389,59 @@ bool CEEInfo::getSystemVAmd64PassStructInRegisterDescriptor(
 #endif // !defined(UNIX_AMD64_ABI_ITF)
 }
 
+// returns the enregister info for a struct based on type of fields, alignment, etc.
+void CEEInfo::getMIPS64PassStructInRegisterDescriptor(
+                                                /*IN*/  CORINFO_CLASS_HANDLE structHnd,
+                                                /*OUT*/ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr)
+{
+    CONTRACTL {
+        THROWS;
+        GC_TRIGGERS;
+        MODE_PREEMPTIVE;
+    } CONTRACTL_END;
+
+#ifdef _TARGET_MIPS64_
+    JIT_TO_EE_TRANSITION();
+
+    _ASSERTE(structPassInRegDescPtr != nullptr);
+    TypeHandle th(structHnd);
+
+    // Make sure this is a value type.
+    if (th.IsValueType())
+    {
+        _ASSERTE((th.GetInternalCorElementType() == ELEMENT_TYPE_VALUETYPE) ||
+                 (th.GetInternalCorElementType() == ELEMENT_TYPE_TYPEDBYREF));
+
+        // The useNativeLayout in this case tracks whether the classification
+        // is for a native layout of the struct or not.
+        // If the struct has special marshaling it has a native layout.
+        // In such cases the classifier needs to use the native layout.
+        // For structs with no native layout, the managed layout should be used
+        // even if classified for the purposes of marshaling/PInvoke passing.
+        bool useNativeLayout = false;
+        MethodTable* methodTablePtr = nullptr;
+        if (!th.IsTypeDesc())
+        {
+            methodTablePtr = th.AsMethodTable();
+        }
+        else
+        {
+            _ASSERTE(th.IsNativeValueType());
+
+            useNativeLayout = true;
+            methodTablePtr = th.AsNativeValueType();
+        }
+        _ASSERTE(methodTablePtr != nullptr);
+
+        structPassInRegDescPtr->structSize = (unsigned int)th.GetSize();
+
+        methodTablePtr->ClassifyEightBytes(structPassInRegDescPtr, useNativeLayout);
+    }
+
+    EE_TO_JIT_TRANSITION();
+#endif // _TARGET_MIPS64_
+}
+
 /*********************************************************************/
 unsigned CEEInfo::getClassNumInstanceFields (CORINFO_CLASS_HANDLE clsHnd)
 {
@@ -11260,6 +11313,12 @@ void reservePersonalityRoutineSpace(ULONG &unwindSize)
 
     // Add space for personality routine, it must be 4-byte aligned.
     unwindSize += sizeof(ULONG);
+#elif defined(_TARGET_MIPS64_)
+    // The JIT passes in a 4-byte aligned block of unwind data.
+    _ASSERTE(IS_ALIGNED(unwindSize, sizeof(ULONG)));
+
+    // Add space for personality routine, it must be 4-byte aligned.
+    unwindSize += sizeof(ULONG);
 #else
     PORTABILITY_ASSERT("reservePersonalityRoutineSpace");
 #endif // !defined(_TARGET_AMD64_)
@@ -11470,6 +11529,13 @@ void CEEJitInfo::allocUnwindInfo (
 
     ULONG * pPersonalityRoutine = (ULONG*)((BYTE *)pUnwindInfo + ALIGN_UP(unwindSize, sizeof(ULONG)));
     *pPersonalityRoutine = (TADDR)ProcessCLRException - baseAddress;
+
+#elif defined(_TARGET_MIPS64_)
+
+    *(LONG *)pUnwindInfo |= (1 << 20); // X bit
+
+    ULONG * pPersonalityRoutine = (ULONG*)((BYTE *)pUnwindInfo + ALIGN_UP(unwindSize, sizeof(ULONG)));
+    *pPersonalityRoutine = ExecutionManager::GetCLRPersonalityRoutineValue();
 
 #endif
 

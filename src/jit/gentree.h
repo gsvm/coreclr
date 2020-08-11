@@ -3535,6 +3535,8 @@ struct GenTreeCall final : public GenTree
 #elif defined(FEATURE_HFA) && defined(_TARGET_ARM64_)
         // SIMD types are returned in vector regs on ARM64.
         return (gtType == TYP_STRUCT) && !HasRetBufArg();
+#elif defined(FEATURE_HFA) && defined(_TARGET_MIPS64_)
+        return (gtType == TYP_STRUCT) && !HasRetBufArg();
 #elif FEATURE_MULTIREG_RET
         return varTypeIsStruct(gtType) && !HasRetBufArg();
 #else

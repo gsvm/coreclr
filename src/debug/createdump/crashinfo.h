@@ -10,7 +10,7 @@ typedef Elf32_auxv_t elf_aux_entry;
 #define PRId PRId32
 #define PRIA "08"
 #define PRIxA PRIA PRIx
-#elif defined(__x86_64__) || defined(__aarch64__)
+#elif defined(__x86_64__) || defined(__aarch64__) || defined(__mips64__)
 typedef Elf64_auxv_t elf_aux_entry;
 #define PRIx PRIx64
 #define PRIu PRIu64

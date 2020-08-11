@@ -197,6 +197,34 @@ SET(libunwind_elfxx_la_SOURCES
     elfxx.c
 )
 
+# The list of files that go into libunwind and libunwind-mips64:
+SET(libunwind_la_SOURCES_mips64_common
+    ${libunwind_la_SOURCES_common}
+    mips64/is_fpreg.c
+    mips64/regname.c
+)
+
+# The list of files that go into libunwind:
+SET(libunwind_la_SOURCES_mips64
+    ${libunwind_la_SOURCES_mips64_common}
+    ${libunwind_la_SOURCES_local}
+	mips64/Lapply_reg_state.c mips64/Lreg_states_iterate.c
+	mips64/Lcreate_addr_space.c mips64/Lget_proc_info.c mips64/Lget_save_loc.c
+	mips64/Lglobal.c mips64/Linit.c mips64/Linit_local.c mips64/Linit_remote.c
+	mips64/Lis_signal_frame.c mips64/Lregs.c mips64/Lresume.c mips64/Lstep.c
+	mips64/getcontext.S
+)
+
+SET(libunwind_mips64_la_SOURCES_mips64
+    ${libunwind_la_SOURCES_mips64_common}
+    ${libunwind_la_SOURCES_generic}
+	mips64/Gapply_reg_state.c mips64/Greg_states_iterate.c
+	mips64/Gcreate_addr_space.c mips64/Gget_proc_info.c mips64/Gget_save_loc.c
+	mips64/Gglobal.c mips64/Ginit.c mips64/Ginit_local.c mips64/Ginit_remote.c
+	mips64/Gis_signal_frame.c mips64/Gregs.c mips64/Gresume.c mips64/Gstep.c
+)
+
+
 # The list of files that go into libunwind and libunwind-aarch64:
 SET(libunwind_la_SOURCES_aarch64_common
     ${libunwind_la_SOURCES_common}
@@ -340,6 +368,11 @@ elseif(CLR_CMAKE_PLATFORM_ARCH_AMD64)
     SET(libunwind_remote_la_SOURCES             ${libunwind_x86_64_la_SOURCES_x86_64})
     SET(libunwind_elf_la_SOURCES                ${libunwind_elf64_la_SOURCES})
     list(APPEND libunwind_setjmp_la_SOURCES     x86_64/longjmp.S x86_64/siglongjmp.SA)
+elseif(CLR_CMAKE_PLATFORM_ARCH_MIPS64)
+    SET(libunwind_la_SOURCES                    ${libunwind_la_SOURCES_mips64})
+    SET(libunwind_remote_la_SOURCES             ${libunwind_mips64_la_SOURCES_mips64})
+    SET(libunwind_elf_la_SOURCES                ${libunwind_elf64_la_SOURCES})
+    list(APPEND libunwind_setjmp_la_SOURCES     mips64/siglongjmp.S)
 endif()
 
 add_library(libunwind

@@ -313,6 +313,10 @@ inline bool varTypeIsValidHfaType(T vt)
     {
 #ifdef _TARGET_ARM64_
         assert(varTypeUsesFloatReg(vt));
+#elif defined(_TARGET_MIPS64_)
+        /* FIXME for MIPS: should amend! */
+        //assert(varTypeUsesFloatReg(vt));
+        return false;
 #else  // !_TARGET_ARM64_
         assert(varTypeIsFloating(vt));
 #endif // !_TARGET_ARM64_

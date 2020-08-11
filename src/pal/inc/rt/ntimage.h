@@ -1023,6 +1023,11 @@ typedef IMAGE_RELOCATION UNALIGNED *PIMAGE_RELOCATION;
 #define IMAGE_REL_IA64_ADDEND           0x001F
 
 //
+// MIPS64 relocation types
+//
+#define IMAGE_REL_MIPS64_PC          0x0004
+
+//
 // CEF relocation types.
 //
 #define IMAGE_REL_CEF_ABSOLUTE          0x0000  // Reference is absolute, no relocation is necessary

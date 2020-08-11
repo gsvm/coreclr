@@ -678,7 +678,7 @@ inline bool isRegParamType(var_types type)
 #endif // !_TARGET_X86_
 }
 
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 /*****************************************************************************/
 // Returns true if 'type' is a struct that can be enregistered for call args
 //                         or can be returned by value in multiple registers.
@@ -730,7 +730,7 @@ inline bool Compiler::VarTypeIsMultiByteAndCanEnreg(
 
     return result;
 }
-#endif //_TARGET_AMD64_ || _TARGET_ARM64_
+#endif //_TARGET_AMD64_ || _TARGET_ARM64_ || _TARGET_MIPS64_
 
 /*****************************************************************************/
 
@@ -1192,14 +1192,14 @@ inline GenTree* Compiler::gtNewFieldRef(var_types typ, CORINFO_FIELD_HANDLE fldH
     {
         unsigned lclNum                  = obj->gtOp.gtOp1->gtLclVarCommon.gtLclNum;
         lvaTable[lclNum].lvFieldAccessed = 1;
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         // These structs are passed by reference; we should probably be able to treat these
         // as non-global refs, but downstream logic expects these to be marked this way.
         if (lvaTable[lclNum].lvIsParam)
         {
             tree->gtFlags |= GTF_GLOB_REF;
         }
-#endif // defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#endif // defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     }
     else
     {
@@ -1780,10 +1780,10 @@ inline void LclVarDsc::incRefCnts(BasicBlock::weight_t weight, Compiler* comp, R
 
             bool doubleWeight = lvIsTemp;
 
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
             // and, for the time being, implict byref params
             doubleWeight |= lvIsImplicitByRef;
-#endif // defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#endif // defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 
             if (doubleWeight && (weight * 2 > weight))
             {
@@ -2032,6 +2032,7 @@ inline
     Compiler::lvaFrameAddress(int varNum, bool* pFPbased)
 #endif
 {
+    /* FIXME for MIPS: should redesign on mips64. */
     assert(lvaDoneFrameLayout != NO_FRAME_LAYOUT);
 
     int  varOffset;
@@ -3066,6 +3067,8 @@ inline unsigned genMapFloatRegNumToRegArgNum(regNumber regNum)
     return regNum - REG_F0;
 #elif defined(_TARGET_ARM64_)
     return regNum - REG_V0;
+#elif defined(_TARGET_MIPS64_)
+    return regNum - REG_F12;
 #elif defined(UNIX_AMD64_ABI)
     return regNum - REG_FLTARG_0;
 #else
@@ -3947,7 +3950,8 @@ inline Compiler::lvaPromotionType Compiler::lvaGetPromotionType(const LclVarDsc*
     // We have a parameter that could be enregistered
     CLANG_FORMAT_COMMENT_ANCHOR;
 
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)// || defined(_TARGET_MIPS64_)
+// should confirm how optimize on mips64.
 
     // The struct parameter is a register candidate
     return PROMOTION_TYPE_INDEPENDENT;

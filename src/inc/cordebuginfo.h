@@ -146,6 +146,40 @@ public:
         REGNUM_R13,
         REGNUM_R14,
         REGNUM_R15,
+#elif _TARGET_MIPS64_
+	REGNUM_R0,
+	REGNUM_AT,
+	REGNUM_V0,
+	REGNUM_V1,
+	REGNUM_A0,
+	REGNUM_A1,
+	REGNUM_A2,
+	REGNUM_A3,
+	REGNUM_A4,
+	REGNUM_A5,
+	REGNUM_A6,
+	REGNUM_A7,
+	REGNUM_T0,
+	REGNUM_T1,
+	REGNUM_T2,
+	REGNUM_T3,
+	REGNUM_S0,
+	REGNUM_S1,
+	REGNUM_S2,
+	REGNUM_S3,
+	REGNUM_S4,
+	REGNUM_S5,
+	REGNUM_S6,
+	REGNUM_S7,
+	REGNUM_T8,
+	REGNUM_T9,
+	REGNUM_K0,
+	REGNUM_K1,
+	REGNUM_GP,
+	REGNUM_SP,
+	REGNUM_FP,
+	REGNUM_RA,
+	REGNUM_PC,
 #else
         PORTABILITY_WARNING("Register numbers not defined on this platform")
 #endif
@@ -165,6 +199,8 @@ public:
         REGNUM_FP = REGNUM_R11,
 #endif //REDHAWK
 #elif _TARGET_ARM64_
+        //Nothing to do here. FP is already alloted.
+#elif _TARGET_MIPS64_
         //Nothing to do here. FP is already alloted.
 #else
         // RegNum values should be properly defined for this platform

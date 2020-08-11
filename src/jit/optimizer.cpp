@@ -8851,6 +8851,7 @@ void Compiler::optOptimizeBools()
                 continue;
             }
 #ifdef _TARGET_ARMARCH_
+// should confirm on mips64.
             // Skip the small operand which we cannot encode.
             if (varTypeIsSmall(c1->TypeGet()))
                 continue;

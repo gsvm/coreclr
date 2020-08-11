@@ -185,6 +185,8 @@ HRESULT DataTargetReader::GetRemotePointerSize(ULONG32* pPointerSize)
         *pPointerSize = 4;
     else if ((platform == CORDB_PLATFORM_WINDOWS_ARM64) || (platform == CORDB_PLATFORM_POSIX_ARM64))
         *pPointerSize = 8;
+    else if (platform == CORDB_PLATFORM_POSIX_MIPS64)
+        *pPointerSize = 8;
     else
         return CORDBG_E_UNSUPPORTED;
     return S_OK;

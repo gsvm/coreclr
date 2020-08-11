@@ -271,6 +271,8 @@ Exit:
         return peARM;
 #elif defined(_TARGET_ARM64_) 
         return peARM64;
+#elif defined(_TARGET_MIPS64_)
+        return peMIPS64;
 #else
         PORTABILITY_ASSERT("Assembly::GetSystemArchitecture");
 #endif

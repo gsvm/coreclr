@@ -74,7 +74,7 @@ class ShuffleIterator
     // Argument location description
     ArgLocDesc* m_argLocDesc;
 
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
     // Current eightByte used for struct arguments in registers
     int m_currentEightByte;
 #endif    
@@ -130,13 +130,64 @@ class ShuffleIterator
     }
 #endif // UNIX_AMD64_ABI
 
+#if defined(_TARGET_MIPS64_)
+    // Get next shuffle offset for struct passed in registers. There has to be at least one offset left.
+    UINT16 GetNextOfsInStruct()
+    {
+        EEClass* eeClass = m_argLocDesc->m_eeClass;
+        _ASSERTE(eeClass != NULL);
+
+        int index;
+        if (m_currentFloatRegIndex < m_argLocDesc->m_cFloatReg || m_currentGenRegIndex < m_argLocDesc->m_cGenReg)
+        {
+            _ASSERTE(m_currentEightByte < eeClass->GetNumberEightBytes());
+            MIPS64ClassificationType eightByte = eeClass->GetEightByteClassification(m_currentEightByte);
+            m_currentEightByte++;
+
+            if (eightByte == MIPS64ClassificationTypeDouble)
+            {
+                _ASSERTE(m_currentFloatRegIndex < m_argLocDesc->m_cFloatReg);
+                index = m_argLocDesc->m_idxFloatReg + m_currentFloatRegIndex + m_currentGenRegIndex;
+                m_currentFloatRegIndex++;
+                return (UINT16)index | ShuffleEntry::REGMASK | ShuffleEntry::FPREGMASK;
+            }
+            else
+            {
+                _ASSERTE(m_currentGenRegIndex < m_argLocDesc->m_cGenReg);
+                index = m_argLocDesc->m_idxGenReg + m_currentGenRegIndex + m_currentFloatRegIndex;
+                m_currentGenRegIndex++;
+                return (UINT16)index | ShuffleEntry::REGMASK;
+            }
+        }
+        else if (m_currentStackSlotIndex < m_argLocDesc->m_cStack)
+        {
+            _ASSERTE(m_currentFloatRegIndex == m_argLocDesc->m_cFloatReg);
+            _ASSERTE(m_currentGenRegIndex == m_argLocDesc->m_cGenReg);
+
+            index = m_argLocDesc->m_idxStack + m_currentStackSlotIndex;
+            m_currentStackSlotIndex++;
+
+            // Delegates cannot handle overly large argument stacks due to shuffle entry encoding limitations.
+            if (index >= ShuffleEntry::REGMASK)
+            {
+                COMPlusThrow(kNotSupportedException);
+            }
+            return (UINT16)index;
+        }
+
+        // There are no more offsets to get, the caller should not have called us
+        _ASSERTE(false);
+        return 0;
+    }
+#endif // _TARGET_MIPS64_
+
 public:
 
     // Construct the iterator for the ArgLocDesc
     ShuffleIterator(ArgLocDesc* argLocDesc)
     :
         m_argLocDesc(argLocDesc),
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
         m_currentEightByte(0),
 #endif
         m_currentGenRegIndex(0),
@@ -149,7 +200,7 @@ public:
     bool HasNextOfs()
     {
         return (m_currentGenRegIndex < m_argLocDesc->m_cGenReg) || 
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
                (m_currentFloatRegIndex < m_argLocDesc->m_cFloatReg) ||
 #endif
                (m_currentStackSlotIndex < m_argLocDesc->m_cStack);        
@@ -160,7 +211,7 @@ public:
     {
         int index;
 
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
 
         // Check if the argLocDesc is for a struct in registers
         EEClass* eeClass = m_argLocDesc->m_eeClass;
@@ -177,7 +228,7 @@ public:
 
             return (UINT16)index | ShuffleEntry::REGMASK | ShuffleEntry::FPREGMASK;
         }
-#endif // UNIX_AMD64_ABI
+#endif // UNIX_AMD64_ABI || _TARGET_MIPS64_
 
         // Shuffle any registers first (the order matters since otherwise we could end up shuffling a stack slot
         // over a register we later need to shuffle down as well).

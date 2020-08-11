@@ -853,7 +853,7 @@ void GCToEEInterface::StompWriteBarrier(WriteBarrierParameters* args)
         //     On architectures with strong ordering, we only need to prevent compiler reordering.
         //     Otherwise we put a process-wide fence here (so that we could use an ordinary read in the barrier)
 
-#if defined(_ARM64_) || defined(_ARM_)      
+#if defined(_ARM64_) || defined(_ARM_) || defined(_TARGET_MIPS64_)
         if (!is_runtime_suspended)
         {
             // If runtime is not suspended, force all threads to see the changed table before seeing updated heap boundaries.
@@ -865,7 +865,7 @@ void GCToEEInterface::StompWriteBarrier(WriteBarrierParameters* args)
         g_lowest_address = args->lowest_address;
         g_highest_address = args->highest_address;
 
-#if defined(_ARM64_) || defined(_ARM_)
+#if defined(_ARM64_) || defined(_ARM_) || defined(_TARGET_MIPS64_)
         // Need to reupdate for changes to g_highest_address g_lowest_address
         stompWBCompleteActions |= ::StompWriteBarrierResize(is_runtime_suspended, args->requires_upper_bounds_check);
 
@@ -905,7 +905,7 @@ void GCToEEInterface::StompWriteBarrier(WriteBarrierParameters* args)
         //       (we care only about managed threads and suspend/resume will do full fences - good enough for us).
         //
 
-#if defined(_ARM64_) || defined(_ARM_)      
+#if defined(_ARM64_) || defined(_ARM_) || defined(_TARGET_MIPS64_)
         is_runtime_suspended = (stompWBCompleteActions & SWB_EE_RESTART) || is_runtime_suspended;
         if (!is_runtime_suspended)
         {

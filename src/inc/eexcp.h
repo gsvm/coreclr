@@ -128,7 +128,7 @@ inline BOOL IsDuplicateClause(EE_ILEXCEPTION_CLAUSE* pEHClause)
     return pEHClause->Flags & COR_ILEXCEPTION_CLAUSE_DUPLICATED;
 }
 
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 // Finally is the only EH construct that can be part of the execution as being fall-through.
 //
 // "Cloned" finally is a contruct that represents a finally block that is used as

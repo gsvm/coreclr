@@ -486,7 +486,7 @@ PAL_GetLogicalProcessorCacheSizeFromOS()
     cacheSize = std::max(cacheSize, (size_t)sysconf(_SC_LEVEL4_CACHE_SIZE));
 #endif
 
-#if defined(_ARM64_)
+#if defined(_ARM64_) || defined(_MIPS64_)
     if(cacheSize == 0)
     {
         size_t size;

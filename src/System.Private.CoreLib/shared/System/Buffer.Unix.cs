@@ -12,7 +12,7 @@ namespace System
 {
     public static partial class Buffer
     {
-#if ARM64
+#if ARM64 || MIPS64
             // Managed code is currently faster than glibc unoptimized memmove
             // TODO-ARM64-UNIX-OPT revisit when glibc optimized memmove is in Linux distros
             // https://github.com/dotnet/coreclr/issues/13844

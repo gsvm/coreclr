@@ -566,6 +566,7 @@ RefPosition* LinearScan::newRefPosition(Interval*    theInterval,
         assert(theRefType == RefTypeBB || theRefType == RefTypeKillGCRefs);
     }
 #ifdef DEBUG
+#ifndef _TARGET_MIPS64_
     if (theInterval != nullptr && regType(theInterval->registerType) == FloatRegisterType)
     {
         // In the case we're using floating point registers we must make sure
@@ -573,6 +574,7 @@ RefPosition* LinearScan::newRefPosition(Interval*    theInterval,
         // whether LSRA will take into consideration FP reg killsets.
         assert(compiler->compFloatingPointUsed || ((mask & RBM_FLT_CALLEE_SAVED) == 0));
     }
+#endif // !_TARGET_MIPS64_
 #endif // DEBUG
 
     // If this reference is constrained to a single register (and it's not a dummy
@@ -1838,6 +1840,76 @@ void LinearScan::unixAmd64UpdateRegStateForArg(LclVarDsc* argDsc)
 
 #endif // defined(UNIX_AMD64_ABI)
 
+#if defined(_TARGET_MIPS64_)
+//------------------------------------------------------------------------
+// unixAmd64UpdateRegStateForArg: Sets the register state for an argument of type STRUCT for MIPS64.
+//
+// Arguments:
+//    argDsc - the LclVarDsc for the argument of interest
+//
+// Notes:
+//     See Compiler::raUpdateRegStateForArg(RegState *regState, LclVarDsc *argDsc) in regalloc.cpp
+//         for how state for argument is updated for non-structs.
+//
+void LinearScan::MIPS64UpdateRegStateForArg(LclVarDsc* argDsc)
+{
+    assert(varTypeIsStruct(argDsc));
+    RegState* intRegState   = &compiler->codeGen->intRegState;
+    RegState* floatRegState = &compiler->codeGen->floatRegState;
+
+    if ((argDsc->lvArgReg != REG_STK) && (argDsc->lvArgReg != REG_NA))
+    {
+        if (genRegMask(argDsc->lvArgReg) & (RBM_ALLFLOAT))
+        {
+            assert(genRegMask(argDsc->lvArgReg) & (RBM_FLTARG_REGS));
+            floatRegState->rsCalleeRegArgMaskLiveIn |= genRegMask(argDsc->lvArgReg);
+        }
+        else
+        {
+            assert(genRegMask(argDsc->lvArgReg) & (RBM_ARG_REGS));
+            intRegState->rsCalleeRegArgMaskLiveIn |= genRegMask(argDsc->lvArgReg);
+        }
+    }
+    else
+    {
+        return;
+    }
+
+    CORINFO_CLASS_HANDLE typeHnd = argDsc->lvVerTypeInfo.GetClassHandle();
+    assert(typeHnd != nullptr);
+    MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR structDesc;
+    compiler->eeGetMIPS64PassStructInRegisterDescriptor(typeHnd, &structDesc);
+
+    var_types regType = structDesc.eightByteClassifications[0] == MIPS64ClassificationTypeDouble ? TYP_DOUBLE : TYP_I_IMPL;
+    unsigned regArgNum = genMapRegNumToRegArgNum(argDsc->lvArgReg, regType);
+    unsigned slots = structDesc.eightByteCount;
+    if (slots > 1)
+    {
+        if (regArgNum + slots > MAX_REG_ARG)
+        {
+            slots = MAX_REG_ARG - regArgNum;
+        }
+    }
+
+    for (unsigned i = 1; i < slots; i++)
+    {
+        regNumber reg = REG_NA;
+
+        if (structDesc.IsDoubleSlot(i))
+        {
+            reg = genMapFloatRegArgNumToRegNum(regArgNum + i);
+            floatRegState->rsCalleeRegArgMaskLiveIn |= genRegMask(reg);
+        }
+        else
+        {
+            reg = genMapIntRegArgNumToRegNum(regArgNum + i);
+            intRegState->rsCalleeRegArgMaskLiveIn |= genRegMask(reg);
+        }
+    }
+}
+
+#endif // defined(_TARGET_MIPS64_)
+
 //------------------------------------------------------------------------
 // updateRegStateForArg: Updates rsCalleeRegArgMaskLiveIn for the appropriate
 //    regState (either compiler->intRegState or compiler->floatRegState),
@@ -1868,6 +1940,13 @@ void LinearScan::updateRegStateForArg(LclVarDsc* argDsc)
     }
     else
 #endif // defined(UNIX_AMD64_ABI)
+#if defined(_TARGET_MIPS64_)
+    if (varTypeIsStruct(argDsc))
+    {
+        MIPS64UpdateRegStateForArg(argDsc);
+    }
+    else
+#endif // defined(_TARGET_MIPS64_)
     {
         RegState* intRegState   = &compiler->codeGen->intRegState;
         RegState* floatRegState = &compiler->codeGen->floatRegState;
@@ -3359,6 +3438,13 @@ int LinearScan::BuildGCWriteBarrier(GenTree* tree)
 
     // the 'addr' goes into x14 (REG_WRITE_BARRIER_DST)
     // the 'src'  goes into x15 (REG_WRITE_BARRIER_SRC)
+    //
+    addrCandidates = RBM_WRITE_BARRIER_DST;
+    srcCandidates  = RBM_WRITE_BARRIER_SRC;
+
+#elif defined(_TARGET_MIPS64_)
+    // the 'addr' goes into (REG_WRITE_BARRIER_DST)
+    // the 'src'  goes into (REG_WRITE_BARRIER_SRC)
     //
     addrCandidates = RBM_WRITE_BARRIER_DST;
     srcCandidates  = RBM_WRITE_BARRIER_SRC;

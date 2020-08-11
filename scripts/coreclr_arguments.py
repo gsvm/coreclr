@@ -71,7 +71,7 @@ class CoreclrArguments:
         self.require_built_core_root = require_built_core_root
         self.require_built_test_dir = require_built_test_dir
 
-        self.valid_arches = ["x64", "x86", "arm", "arm64"]
+        self.valid_arches = ["x64", "x86", "arm", "arm64", "mips64"]
         self.valid_build_types = ["Debug", "Checked", "Release"]
         self.valid_host_os = ["Windows", "Windows_NT", "OSX", "Linux"]
 
@@ -188,6 +188,8 @@ class CoreclrArguments:
                 return "armel"
             elif platform_machine == "aarch64" or platform_machine == "arm64":
                 return "arm64"
+            elif platform_machine == "mips64":
+                return "mips64"
             else:
                 raise RuntimeError("Unsupported platform")
 

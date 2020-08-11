@@ -12,6 +12,7 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <DisableProjectBuild Condition="'$(Platform)' == 'x64'">true</DisableProjectBuild>
     <DisableProjectBuild Condition="'$(Platform)' == 'arm64'">true</DisableProjectBuild>
+    <DisableProjectBuild Condition="'$(Platform)' == 'mips64'">true</DisableProjectBuild>
   </PropertyGroup>
   <!-- Default configurations to help VS understand the configurations -->
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' "></PropertyGroup>

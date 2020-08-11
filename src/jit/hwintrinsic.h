@@ -9,6 +9,9 @@
 #include "hwintrinsicxarch.h"
 #elif defined(_TARGET_ARM64_)
 #include "hwintrinsicArm64.h"
+#elif defined(_TARGET_ARM64_)
+//#include "hwintrinsicMips64.h"
+#pragma message("Unimplemented yet MIPS64")
 #endif
 
 #endif // _HW_INTRINSIC_H_

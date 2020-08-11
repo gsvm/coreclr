@@ -15,7 +15,7 @@
 #include "regset.h"
 #include "jitgcinfo.h"
 
-#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_ARM_)
+#if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_ARM_) || defined(_TARGET_MIPS64_)
 #define FOREACH_REGISTER_FILE(file)                                                                                    \
     for ((file) = &(this->intRegState); (file) != NULL;                                                                \
          (file) = ((file) == &(this->intRegState)) ? &(this->floatRegState) : NULL)
@@ -309,6 +309,67 @@ protected:
     void genRestoreCalleeSavedRegistersHelp(regMaskTP regsToRestoreMask, int lowestCalleeSavedOffset, int spDelta);
 
     void genPushCalleeSavedRegisters(regNumber initReg, bool* pInitRegZeroed);
+#elif defined(_TARGET_MIPS64_)
+/* FIXME for MIPS: all the following should redefine for mips64. */
+    bool genInstrWithConstant(instruction ins,
+                              emitAttr    attr,
+                              regNumber   reg1,
+                              regNumber   reg2,
+                              ssize_t     imm,
+                              regNumber   tmpReg,
+                              bool        inUnwindRegion = false);
+
+    void genStackPointerAdjustment(ssize_t spAdjustment, regNumber tmpReg, bool* pTmpRegIsZero, bool reportUnwindData);
+
+    void genPrologSaveRegPair(regNumber reg1,
+                              regNumber reg2,
+                              int       spOffset,
+                              int       spDelta,
+                              bool      useSaveNextPair,
+                              regNumber tmpReg,
+                              bool*     pTmpRegIsZero);
+
+    void genPrologSaveReg(regNumber reg1, int spOffset, int spDelta, regNumber tmpReg, bool* pTmpRegIsZero);
+
+    void genEpilogRestoreRegPair(regNumber reg1,
+                                 regNumber reg2,
+                                 int       spOffset,
+                                 int       spDelta,
+                                 bool      useSaveNextPair,
+                                 regNumber tmpReg,
+                                 bool*     pTmpRegIsZero);
+
+    void genEpilogRestoreReg(regNumber reg1, int spOffset, int spDelta, regNumber tmpReg, bool* pTmpRegIsZero);
+
+    // A simple struct to keep register pairs for prolog and epilog.
+    struct RegPair
+    {
+        regNumber reg1;
+        regNumber reg2;
+        bool      useSaveNextPair;
+
+        RegPair(regNumber reg1) : reg1(reg1), reg2(REG_NA), useSaveNextPair(false)
+        {
+        }
+
+        RegPair(regNumber reg1, regNumber reg2) : reg1(reg1), reg2(reg2), useSaveNextPair(false)
+        {
+            assert(reg2 == REG_NEXT(reg1));
+        }
+    };
+
+    static void genBuildRegPairsStack(regMaskTP regsMask, ArrayStack<RegPair>* regStack);
+    static void genSetUseSaveNextPairs(ArrayStack<RegPair>* regStack);
+
+    static int genGetSlotSizeForRegsInMask(regMaskTP regsMask);
+
+    void genSaveCalleeSavedRegisterGroup(regMaskTP regsMask, int spDelta, int spOffset);
+    void genRestoreCalleeSavedRegisterGroup(regMaskTP regsMask, int spDelta, int spOffset);
+
+    void genSaveCalleeSavedRegistersHelp(regMaskTP regsToSaveMask, int lowestCalleeSavedOffset, int spDelta);
+    void genRestoreCalleeSavedRegistersHelp(regMaskTP regsToRestoreMask, int lowestCalleeSavedOffset, int spDelta);
+
+    void genPushCalleeSavedRegisters(regNumber initReg, bool* pInitRegZeroed);
 #else
     void genPushCalleeSavedRegisters();
 #endif
@@ -370,6 +431,25 @@ protected:
         int fiFrameType;                     // Funclet frame types are numbered. See genFuncletProlog() for details.
         int fiSpDelta1;                      // Stack pointer delta 1 (negative)
         int fiSpDelta2;                      // Stack pointer delta 2 (negative)
+    };
+
+    FuncletFrameInfoDsc genFuncletInfo;
+
+#elif defined(_TARGET_MIPS64_)
+
+    // A set of information that is used by funclet prolog and epilog generation.
+    // It is collected once, before funclet prologs and epilogs are generated,
+    // and used by all funclet prologs and epilogs, which must all be the same.
+    struct FuncletFrameInfoDsc
+    {
+        regMaskTP fiSaveRegs;                // Set of callee-saved registers saved in the funclet prolog (includes RA)
+        int fiFunction_CallerSP_to_FP_delta; // Delta between caller SP and the frame pointer in the parent function
+                                             // (negative)
+        int fiSP_to_FPRA_save_delta;         // FP/RA register save offset from SP (positive)
+        int fiSP_to_PSP_slot_delta;          // PSP slot offset from SP (positive)
+        int fiCallerSP_to_PSP_slot_delta;    // PSP slot offset from Caller SP (negative)
+        int fiFrameType;                     // Funclet frame types are numbered. See genFuncletProlog() for details.
+        int fiSpDelta1;                      // Stack pointer delta 1 (negative)
     };
 
     FuncletFrameInfoDsc genFuncletInfo;
@@ -509,6 +589,10 @@ protected:
     void genArm64EmitterUnitTests();
 #endif
 
+#if defined(DEBUG) && defined(_TARGET_MIPS64_)
+    void genMIPS64EmitterUnitTests();
+#endif
+
 #if defined(DEBUG) && defined(LATE_DISASM) && defined(_TARGET_AMD64_)
     void genAmd64EmitterUnitTests();
 #endif
@@ -518,6 +602,12 @@ protected:
     virtual bool IsSaveFpLrWithAllCalleeSavedRegisters() const;
     bool         genSaveFpLrWithAllCalleeSavedRegisters;
 #endif // _TARGET_ARM64_
+
+#ifdef _TARGET_MIPS64_
+    virtual void SetSaveFpRaWithAllCalleeSavedRegisters(bool value);
+    virtual bool IsSaveFpRaWithAllCalleeSavedRegisters() const;
+    bool         genSaveFpRaWithAllCalleeSavedRegisters;
+#endif // _TARGET_MIPS64_
 
     //-------------------------------------------------------------------------
     //
@@ -813,7 +903,7 @@ protected:
     void genLeaInstruction(GenTreeAddrMode* lea);
     void genSetRegToCond(regNumber dstReg, GenTree* tree);
 
-#if defined(_TARGET_ARMARCH_)
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
     void genScaledAdd(emitAttr attr, regNumber targetReg, regNumber baseReg, regNumber indexReg, int scale);
 #endif // _TARGET_ARMARCH_
 
@@ -1184,13 +1274,17 @@ protected:
     void genTableBasedSwitch(GenTree* tree);
     void genCodeForArrIndex(GenTreeArrIndex* treeNode);
     void genCodeForArrOffset(GenTreeArrOffs* treeNode);
+#if defined(_TARGET_MIPS64_)
+    instruction genGetInsForOper(GenTree* treeNode);
+#else
     instruction genGetInsForOper(genTreeOps oper, var_types type);
+#endif
     bool genEmitOptimizedGCWriteBarrier(GCInfo::WriteBarrierForm writeBarrierForm, GenTree* addr, GenTree* data);
     void genCallInstruction(GenTreeCall* call);
     void genJmpMethod(GenTree* jmp);
     BasicBlock* genCallFinally(BasicBlock* block);
     void genCodeForJumpTrue(GenTreeOp* jtrue);
-#ifdef _TARGET_ARM64_
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     void genCodeForJumpCompare(GenTreeOp* tree);
 #endif // _TARGET_ARM64_
 
@@ -1214,13 +1308,13 @@ protected:
     void genFloatReturn(GenTree* treeNode);
 #endif // _TARGET_X86_
 
-#if defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     void genSimpleReturn(GenTree* treeNode);
 #endif // _TARGET_ARM64_
 
     void genReturn(GenTree* treeNode);
 
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
     void genStackPointerConstantAdjustment(ssize_t spDelta);
 #else  // !_TARGET_ARMARCH_
     void genStackPointerConstantAdjustment(ssize_t spDelta, regNumber regTmp);
@@ -1394,6 +1488,9 @@ public:
     void instGen_Return(unsigned stkArgSize);
 
 #ifdef _TARGET_ARM64_
+    void instGen_MemoryBarrier(insBarrier barrierType = INS_BARRIER_ISH);
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
     void instGen_MemoryBarrier(insBarrier barrierType = INS_BARRIER_ISH);
 #else
     void instGen_MemoryBarrier();

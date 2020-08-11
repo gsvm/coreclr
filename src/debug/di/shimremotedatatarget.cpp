@@ -236,6 +236,8 @@ ShimRemoteDataTarget::GetPlatform(
          *pPlatform = CORDB_PLATFORM_POSIX_ARM;
      #elif defined(DBG_TARGET_ARM64)
          *pPlatform = CORDB_PLATFORM_POSIX_ARM64;
+     #elif defined(DBG_TARGET_MIPS64)
+         *pPlatform = CORDB_PLATFORM_POSIX_MIPS64;
      #else
          #error Unknown Processor.
      #endif
@@ -248,6 +250,8 @@ ShimRemoteDataTarget::GetPlatform(
         *pPlatform = CORDB_PLATFORM_WINDOWS_ARM;
     #elif defined(DBG_TARGET_ARM64)
         *pPlatform = CORDB_PLATFORM_WINDOWS_ARM64;
+    #elif defined(DBG_TARGET_MIPS64)
+        *pPlatform = CORDB_PLATFORM_WINDOWS_MIPS64;
     #else
         #error Unknown Processor.
     #endif

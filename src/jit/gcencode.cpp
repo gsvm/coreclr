@@ -3914,7 +3914,7 @@ public:
             printf("Set WantsReportOnlyLeaf.\n");
         }
     }
-#elif defined(_TARGET_ARMARCH_)
+#elif defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
     void SetHasTailCalls()
     {
         m_gcInfoEncoder->SetHasTailCalls();
@@ -4068,7 +4068,7 @@ void GCInfo::gcInfoBlockHdrSave(GcInfoEncoder* gcInfoEncoder, unsigned methodSiz
 
 #endif // FEATURE_EH_FUNCLETS
 
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
     if (compiler->codeGen->hasTailCalls)
     {
         gcInfoEncoderWithLog->SetHasTailCalls();

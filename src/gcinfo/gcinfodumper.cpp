@@ -187,6 +187,42 @@ BOOL GcInfoDumper::ReportPointerRecord (
         REG(Lr,  Lr),
         { FIELD_OFFSET(T_CONTEXT, Sp) },
 #undef REG
+#elif defined(_TARGET_MIPS64_)
+#undef REG
+#define REG(reg, field) { FIELD_OFFSET(Mips64VolatileContextPointer, field) }
+        //REG(zero, R0),
+        REG(at, At),
+        REG(v0, V0),
+        REG(v1, V1),
+        REG(a0, A0),
+        REG(a1, A1),
+        REG(a2, A2),
+        REG(a3, A3),
+        REG(a4, A4),
+        REG(a5, A5),
+        REG(a6, A6),
+        REG(a7, A7),
+        REG(t0, T0),
+        REG(t1, T1),
+        REG(t2, T2),
+        REG(t3, T3),
+        REG(t8, T8),
+        REG(t9, T9),
+#undef REG
+#define REG(reg, field) { FIELD_OFFSET(T_KNONVOLATILE_CONTEXT_POINTERS, field) }
+        REG(s0, S0),
+        REG(s1, S1),
+        REG(s2, S2),
+        REG(s3, S3),
+        REG(s4, S4),
+        REG(s5, S5),
+        REG(s6, S6),
+        REG(s7, S7),
+        REG(gp, Gp),
+        REG(fp, Fp),
+        REG(ra, Ra),
+        { FIELD_OFFSET(T_CONTEXT, Sp) },
+#undef REG
 #else
 PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this platform.") 
 #endif
@@ -208,10 +244,16 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
 #elif defined(_TARGET_ARM_)
     iSPRegister = (FIELD_OFFSET(T_CONTEXT, Sp) - FIELD_OFFSET(T_CONTEXT, R0)) / sizeof(ULONG);
     UINT iBFRegister = m_StackBaseRegister;
+#elif defined(_TARGET_MIPS64_)
+    assert(!"unimplemented on MIPS yet");
+    iSPRegister = 0;
 #endif
 
 #if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
     BYTE* pContext = (BYTE*)&(pRD->volatileCurrContextPointers);
+#elif defined(_TARGET_MIPS64_)
+    assert(!"unimplemented on MIPS yet");
+    BYTE* pContext = (BYTE*)pRD->pCurrentContext;
 #else
     BYTE* pContext = (BYTE*)pRD->pCurrentContext;
 #endif
@@ -278,6 +320,8 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
             {
                 break;
             }
+#elif defined(_TARGET_MIPS64_)
+    assert(!"unimplemented on MIPS yet");
 #endif
             {
                 _ASSERTE(iReg < nCONTEXTRegisters);
@@ -302,6 +346,9 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
                 {
                     pReg = (SIZE_T*)((BYTE*)pRD->pCurrentContext + rgRegisters[iReg].cbContextOffset);
                 }
+#elif defined(_TARGET_MIPS64_)
+    assert(!"unimplemented on MIPS yet");
+                pReg = (SIZE_T*)(pContext + rgRegisters[iReg].cbContextOffset);
 #else
                 pReg = (SIZE_T*)(pContext + rgRegisters[iReg].cbContextOffset);
 #endif 
@@ -371,6 +418,8 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
                 {
 #if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
                     base = GC_SP_REL;
+#elif defined(_TARGET_MIPS64_)
+    assert(!"unimplemented on MIPS yet");
 #else
                     if (0 == ctx)
                         base = GC_SP_REL;
@@ -400,6 +449,8 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
 
 #if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
         pContext = (BYTE*)pRD->pCurrentContextPointers;
+#elif defined(_TARGET_MIPS64_)
+    assert(!"unimplemented on MIPS yet");
 #else
         pContext = (BYTE*)pRD->pCallerContext;
 #endif
@@ -603,6 +654,9 @@ GcInfoDumper::EnumerateStateChangesResults GcInfoDumper::EnumerateStateChanges (
     {
         *(ppVolatileReg+iReg) = &regdisp.pCurrentContext->X0 + iReg;
     }
+#elif defined(_TARGET_MIPS64_)
+#pragma message("Unimplemented yet")
+    assert(!"unimplemented on MIPS yet");
 #else
 PORTABILITY_ASSERT("GcInfoDumper::EnumerateStateChanges is not implemented on this platform.") 
 #endif
@@ -650,9 +704,9 @@ PORTABILITY_ASSERT("GcInfoDumper::EnumerateStateChanges is not implemented on th
                                (GcInfoDecoderFlags)(  DECODE_SECURITY_OBJECT
                                                     | DECODE_CODE_LENGTH
                                                     | DECODE_VARARG
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
                                                     | DECODE_HAS_TAILCALLS
-#endif // _TARGET_ARM_ || _TARGET_ARM64_
+#endif // _TARGET_ARM_ || _TARGET_ARM64_ || _TARGET_MIPS64_
 
                                                     | DECODE_INTERRUPTIBILITY),
                                offset);
@@ -673,6 +727,9 @@ PORTABILITY_ASSERT("GcInfoDumper::EnumerateStateChanges is not implemented on th
         UINT32 safePointOffset = offset;
 #if defined(_TARGET_AMD64_) || defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) 
         safePointOffset++;
+#elif defined(_TARGET_MIPS64_)
+#pragma message("Unimplemented yet")
+    assert(!"unimplemented on MIPS yet");
 #endif
         if(safePointDecoder.IsSafePoint(safePointOffset))
         {

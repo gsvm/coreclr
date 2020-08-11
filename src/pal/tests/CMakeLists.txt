@@ -8,6 +8,8 @@ elseif(CLR_CMAKE_PLATFORM_ARCH_ARM)
     set(PAL_CMAKE_PLATFORM_ARCH_ARM 1)
 elseif(CLR_CMAKE_PLATFORM_ARCH_ARM64)
     set(PAL_CMAKE_PLATFORM_ARCH_ARM64 1)
+elseif(CLR_CMAKE_PLATFORM_ARCH_MIPS64)
+    set(PAL_CMAKE_PLATFORM_ARCH_MIPS64 1)
 endif()
 
 # Compile options
@@ -26,8 +28,11 @@ elseif(PAL_CMAKE_PLATFORM_ARCH_ARM)
 elseif(PAL_CMAKE_PLATFORM_ARCH_ARM64)
   add_definitions(-DBIT64)
   add_definitions(-D_WIN64)
+elseif(PAL_CMAKE_PLATFORM_ARCH_MIPS64)
+  add_definitions(-DBIT64)
+  add_definitions(-D_WIN64)
 else()
-  message(FATAL_ERROR "Only ARM, ARM64, I386, and AMD64 is supported")
+  message(FATAL_ERROR "Only ARM, ARM64, I386, AMD64 and MIPS64 is supported")
 endif()
 
 # C++ emits errors and warnings for c-string literal fed into char* parameter

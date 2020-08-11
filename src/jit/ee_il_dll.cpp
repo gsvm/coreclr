@@ -511,6 +511,8 @@ unsigned Compiler::eeGetArgSize(CORINFO_ARG_LIST_HANDLE list, CORINFO_SIG_INFO* 
         }
 #elif defined(_TARGET_ARM_)
 //  otherwise will we pass this struct by value in multiple registers
+#elif defined(_TARGET_MIPS64_)
+//  otherwise will we pass this struct by value in multiple registers
 #else
         NYI("unknown target");
 #endif // defined(_TARGET_XXX_)
@@ -1248,6 +1250,15 @@ void Compiler::eeGetSystemVAmd64PassStructInRegisterDescriptor(
 }
 
 #endif // UNIX_AMD64_ABI
+
+#if defined(_TARGET_MIPS64_)
+void Compiler::eeGetMIPS64PassStructInRegisterDescriptor(
+    /*IN*/ CORINFO_CLASS_HANDLE                                  structHnd,
+    /*OUT*/ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr)
+{
+    info.compCompHnd->getMIPS64PassStructInRegisterDescriptor(structHnd, structPassInRegDescPtr);
+}
+#endif // _TARGET_MIPS64_
 
 bool Compiler::eeTryResolveToken(CORINFO_RESOLVED_TOKEN* resolvedToken)
 {

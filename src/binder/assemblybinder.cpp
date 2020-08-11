@@ -44,6 +44,10 @@
 #define IMAGE_FILE_MACHINE_ARM64             0xAA64  // ARM64 Little-Endian
 #endif
 
+#ifndef IMAGE_FILE_MACHINE_MIPS64
+#define IMAGE_FILE_MACHINE_MIPS64             0xDD64  // MIPS64 Little-Endian
+#endif
+
 BOOL IsCompilationProcess();
 
 #if !defined(DACCESS_COMPILE) && !defined(CROSSGEN_COMPILE)
@@ -527,6 +531,8 @@ namespace BINDER_SPACE
                 // is the machine type.
                 if(dwImageType == IMAGE_FILE_MACHINE_ARM64) 
                     *PeKind = peARM64;
+                else if(dwImageType == IMAGE_FILE_MACHINE_MIPS64)
+                    *PeKind = peMIPS64;
                 else if (dwImageType == IMAGE_FILE_MACHINE_AMD64) 
                     *PeKind = peAMD64;
                 else 

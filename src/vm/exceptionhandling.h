@@ -403,6 +403,7 @@ private:
                     X86_ARG(PT_CONTEXT pContextRecord)
                     ARM_ARG(PT_CONTEXT pContextRecord)
                     ARM64_ARG(PT_CONTEXT pContextRecord)
+                    MIPS64_ARG(PT_CONTEXT pContextRecord)
                     );
 
     inline static BOOL

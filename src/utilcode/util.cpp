@@ -989,6 +989,7 @@ DWORD LCM(DWORD u, DWORD v)
     CONTRACTL_END;
 
 #if !defined(FEATURE_REDHAWK) && (defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_))
+// should confirm on mips64.
     BOOL enableGCCPUGroups     = CLRConfig::GetConfigValue(CLRConfig::EXTERNAL_GCCpuGroup) != 0;
     BOOL threadUseAllCpuGroups = CLRConfig::GetConfigValue(CLRConfig::EXTERNAL_Thread_UseAllCpuGroups) != 0;
 
@@ -1080,6 +1081,7 @@ retry:
     LIMITED_METHOD_CONTRACT;
 
 #if !defined(FEATURE_REDHAWK) && (defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_))
+// should confirm on mips64.
     WORD bTemp = 0;
     WORD bDiff = processor_number - bTemp;
 
@@ -1111,6 +1113,7 @@ retry:
     CONTRACTL_END;
 
 #if !defined(FEATURE_REDHAWK) && (defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_))
+// should confirm on mips64.
     // m_enableGCCPUGroups and m_threadUseAllCpuGroups must be TRUE
     _ASSERTE(m_enableGCCPUGroups && m_threadUseAllCpuGroups);
 

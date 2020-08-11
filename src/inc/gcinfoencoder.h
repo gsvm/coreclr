@@ -441,7 +441,7 @@ public:
     // instead of once for each live function/funclet on the stack.
     // Called only by RyuJIT (not JIT64)
     void SetWantsReportOnlyLeaf();
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     void SetHasTailCalls();
 #endif // _TARGET_AMD64_
 
@@ -497,7 +497,7 @@ private:
     bool   m_IsVarArg;
 #if defined(_TARGET_AMD64_)
     bool   m_WantsReportOnlyLeaf;
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     bool   m_HasTailCalls;
 #endif // _TARGET_AMD64_
     INT32  m_SecurityObjectStackSlot;

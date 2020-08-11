@@ -145,7 +145,7 @@ private:
     void ReplaceArgWithPutArgOrBitcast(GenTree** ppChild, GenTree* newNode);
     GenTree* NewPutArg(GenTreeCall* call, GenTree* arg, fgArgTabEntry* info, var_types type);
     void LowerArg(GenTreeCall* call, GenTree** ppTree);
-#ifdef _TARGET_ARMARCH_
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
     GenTree* LowerFloatArg(GenTree** pArg, fgArgTabEntry* info);
     GenTree* LowerFloatArgReg(GenTree* arg, regNumber regNum);
 #endif
@@ -165,9 +165,9 @@ private:
     GenTree* AddrGen(ssize_t addr);
     GenTree* AddrGen(void* addr);
 
-    GenTree* Ind(GenTree* tree)
+    GenTree* Ind(GenTree* tree, var_types type = TYP_I_IMPL)
     {
-        return comp->gtNewOperNode(GT_IND, TYP_I_IMPL, tree);
+        return comp->gtNewOperNode(GT_IND, type, tree);
     }
 
     GenTree* PhysReg(regNumber reg, var_types type = TYP_I_IMPL)
