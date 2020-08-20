@@ -296,20 +296,19 @@ int LinearScan::BuildNode(GenTree* tree)
         //    break;
 
         case GT_MUL:
-            if (tree->gtOverflow())
-            {
-                // Need a register different from target reg to check for overflow.
-                buildInternalIntRegisterDefForNode(tree);
-                setInternalRegsDelayFree = true;
-            }
-            __fallthrough;
-
         case GT_MOD:
         case GT_UMOD:
         case GT_DIV:
         case GT_MULHI:
         case GT_UDIV:
         {
+            if (emitActualTypeSize(tree) == EA_4BYTE)
+            {
+                // We need two registers: tmpRegOp1 and tmpRegOp2
+                buildInternalIntRegisterDefForNode(tree);
+                buildInternalIntRegisterDefForNode(tree);
+            }
+
             srcCount = BuildBinaryUses(tree->AsOp());
             buildInternalRegisterUses();
             assert(dstCount == 1);

@@ -732,8 +732,8 @@ protected:
 #ifdef _TARGET_MIPS64_
         /* FIXME for MIPS: maybe delete on future. */
         opSize   _idOpSize : 3; // operand size: 0=1 , 1=2 , 2=4 , 3=8, 4=16
-        insOpts  _idInsOpt : 6; // mips options for special: placeholders. e.g emitIns_R_C.
-        unsigned _idLclVar : 1; // access a local on stack
+        insOpts  _idInsOpt : 6; // mips options for special: placeholders. e.g emitIns_R_C, also identifying the accessing a local on stack.
+        unsigned _idLclVar : 1; // access a local on stack, TODO: will be delelted later !!!
 #endif
 
 #ifdef _TARGET_ARM_
@@ -859,9 +859,9 @@ protected:
 // about reading what we think is here, to avoid unexpected corruption issues.
 
 #if !defined(_TARGET_ARM64_) && !defined(_TARGET_MIPS64_)
-/* FIXME for MIPS: maybe needed this for mips. */
             emitLclVarAddr iiaLclVar;
 #endif
+
             BasicBlock*  iiaBBlabel;
             insGroup*    iiaIGlabel;
             BYTE*        iiaAddr;
@@ -915,14 +915,18 @@ protected:
 
             struct
             {
-                // For 64-bit architecture this 32-bit structure can pack with these unsigned bit fields
-                emitLclVarAddr iiaLclVar;
-                GCtype         _idGCref2 : 2;
+                unsigned int iiaEncodedInstr;//instruction's binary encoding.
+                //GCtype         _idGCref2 : 2;
                 regNumber _idReg3 : REGNUM_BITS;
                 regNumber _idReg4 : REGNUM_BITS;
             };
 
-            unsigned int iiaEncodedInstr;//instruction's binary encoding or jmp's temporary offset.
+            struct
+            {
+                unsigned int iiaJmpOffset;//temporary saving the offset of jmp or data.
+                emitLclVarAddr iiaLclVar;
+            };
+
             void iiaSetInstrEncode(unsigned int encode)
             {
                 iiaEncodedInstr = encode;
@@ -930,6 +934,15 @@ protected:
             unsigned int iiaGetInstrEncode() const
             {
                 return iiaEncodedInstr;
+            }
+
+            void iiaSetJmpOffset(unsigned int offset)
+            {
+                iiaJmpOffset = offset;
+            }
+            unsigned int iiaGetJmpOffset() const
+            {
+                return iiaJmpOffset;
             }
 #endif // defined(_TARGET_MIPS64_)
 
@@ -1093,17 +1106,17 @@ protected:
 #endif // _TARGET_ARM64_
 
 #ifdef _TARGET_MIPS64_
-        /* FIXME for MIPS: is needed for mips64? */
-        GCtype idGCrefReg2() const
-        {
-            assert(!idIsSmallDsc());
-            return (GCtype)idAddr()->_idGCref2;
-        }
-        void idGCrefReg2(GCtype gctype)
-        {
-            assert(!idIsSmallDsc());
-            idAddr()->_idGCref2 = gctype;
-        }
+        ///* FIXME for MIPS: is needed for mips64? */
+        //GCtype idGCrefReg2() const
+        //{
+        //    assert(!idIsSmallDsc());
+        //    return (GCtype)idAddr()->_idGCref2;
+        //}
+        //void idGCrefReg2(GCtype gctype)
+        //{
+        //    assert(!idIsSmallDsc());
+        //    idAddr()->_idGCref2 = gctype;
+        //}
 #endif // _TARGET_MIPS64_
 
         regNumber idReg2() const

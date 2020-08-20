@@ -3935,7 +3935,7 @@ void CodeGen::genFnPrologCalleeRegArgs(regNumber xtraReg, bool* pXtraRegClobbere
 
             if ((-32768 <= base) && (base <= 32767))
             {
-                getEmitter()->emitIns_R_R_I(ins_Store(storeType), size, srcRegNum, reg2, base);
+                getEmitter()->emitIns_S_R(ins_Store(storeType), size, srcRegNum, varNum, baseOffset);
             }
             else
             {
@@ -3946,11 +3946,12 @@ void CodeGen::genFnPrologCalleeRegArgs(regNumber xtraReg, bool* pXtraRegClobbere
                     getEmitter()->emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, tmp_offset>>16);
                     getEmitter()->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, tmp_offset & 0xffff);
                     getEmitter()->emitIns_R_R_R(INS_daddu, EA_PTRSIZE, REG_AT, REG_AT, reg2);
-                    getEmitter()->emitIns_R_R_I(ins_Store(storeType), size, srcRegNum, REG_AT, 0);
+                    getEmitter()->emitIns_S_R(ins_Store(storeType), size, srcRegNum, varNum, -8);
                 }
                 else
                 {
-                    getEmitter()->emitIns_R_R_I(ins_Store(storeType), size, srcRegNum, REG_AT, base - tmp_offset);
+                    baseOffset = -(base - tmp_offset) - 8;
+                    getEmitter()->emitIns_S_R(ins_Store(storeType), size, srcRegNum, varNum, baseOffset);
                 }
             }
 
@@ -7141,7 +7142,6 @@ void CodeGen::genZeroInitFrame(int untrLclHi, int untrLclLo, regNumber initReg, 
         if (uCntBytes > 0)
         {
             assert(uCntBytes == sizeof(int));
-            assert(padding == sizeof(int));
             getEmitter()->emitIns_R_R_I(INS_sw, EA_4BYTE, REG_R0, rAddr, padding);
             uCntBytes -= sizeof(int);
         }

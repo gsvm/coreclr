@@ -1708,10 +1708,14 @@ void CodeGen::genCodeForMulHi(GenTreeOp* treeNode)
     else
     {
         assert(EA_SIZE(attr) == EA_4BYTE);
+        regNumber tmpRegOp1 = treeNode->ExtractTempReg();
+        regNumber tmpRegOp2 = treeNode->ExtractTempReg();
+        emit->emitIns_R_R_I(INS_sll, attr, tmpRegOp1, op1->gtRegNum, 0);
+        emit->emitIns_R_R_I(INS_sll, attr, tmpRegOp2, op2->gtRegNum, 0);
 
         instruction ins = isUnsigned ? INS_multu : INS_mult;
 
-        emit->emitIns_R_R(ins, attr, op1->gtRegNum, op2->gtRegNum);
+        emit->emitIns_R_R(ins, attr, tmpRegOp1, tmpRegOp2);
 
         emit->emitIns_R(INS_mfhi, attr, targetReg);
     }
@@ -2330,7 +2334,7 @@ void CodeGen::genCodeForNegNot(GenTree* tree)
     if (ins == INS_not && attr == EA_4BYTE)
     {
         // MIPS needs to sign-extend dst when deal with 32bit data
-        getEmitter()->emitIns_R_R_R(INS_addu, attr, targetReg, targetReg, REG_R0);
+        getEmitter()->emitIns_R_R_I(INS_sll, attr, targetReg, targetReg, 0);
     }
 
     genProduceReg(tree);
@@ -2677,6 +2681,8 @@ void CodeGen::genCodeForCpObj(GenTreeObj* cpObjNode)
     emitter* emit = getEmitter();
 
     BYTE* gcPtrs = cpObjNode->gtGcPtrs;
+    emitAttr attrSrcAddr = emitActualTypeSize(srcAddrType);
+    emitAttr attrDstAddr = emitActualTypeSize(dstAddr->TypeGet());
 
     // If we can prove it's on the stack we don't need to use the write barrier.
     if (dstOnStack)
@@ -2689,11 +2695,11 @@ void CodeGen::genCodeForCpObj(GenTreeObj* cpObjNode)
             emitAttr attr1 = emitTypeSize(compiler->getJitGCType(gcPtrs[i + 1]));
 
             emit->emitIns_R_R_I(INS_ld, attr0, tmpReg, REG_WRITE_BARRIER_SRC_BYREF, 0);
-            emit->emitIns_R_R_I(INS_ld, attr0, tmpReg2, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
-            emit->emitIns_R_R_I(INS_daddiu, attr1, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, 2 * TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_ld, attr1, tmpReg2, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_daddiu, attrSrcAddr, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, 2 * TARGET_POINTER_SIZE);
             emit->emitIns_R_R_I(INS_sd, attr0, tmpReg, REG_WRITE_BARRIER_DST_BYREF, 0);
-            emit->emitIns_R_R_I(INS_sd, attr0, tmpReg2, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
-            emit->emitIns_R_R_I(INS_daddiu, attr1, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, 2 * TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_sd, attr1, tmpReg2, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_daddiu, attrDstAddr, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, 2 * TARGET_POINTER_SIZE);
             i += 2;
         }
 
@@ -2703,9 +2709,9 @@ void CodeGen::genCodeForCpObj(GenTreeObj* cpObjNode)
             emitAttr attr0 = emitTypeSize(compiler->getJitGCType(gcPtrs[i + 0]));
 
             emit->emitIns_R_R_I(INS_ld, attr0, tmpReg, REG_WRITE_BARRIER_SRC_BYREF, 0);
-            emit->emitIns_R_R_I(INS_daddiu, attr0, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_daddiu, attrSrcAddr, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
             emit->emitIns_R_R_I(INS_sd, attr0, tmpReg, REG_WRITE_BARRIER_DST_BYREF, 0);
-            emit->emitIns_R_R_I(INS_daddiu, attr0, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_daddiu, attrDstAddr, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
         }
     }
     else
@@ -2723,18 +2729,18 @@ void CodeGen::genCodeForCpObj(GenTreeObj* cpObjNode)
                     {
                         emit->emitIns_R_R_I(INS_ld, EA_8BYTE, tmpReg, REG_WRITE_BARRIER_SRC_BYREF, 0);
                         emit->emitIns_R_R_I(INS_ld, EA_8BYTE, tmpReg2, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
-                        emit->emitIns_R_R_I(INS_daddiu, EA_8BYTE, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, 2 * TARGET_POINTER_SIZE);
+                        emit->emitIns_R_R_I(INS_daddiu, attrSrcAddr, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, 2 * TARGET_POINTER_SIZE);
                         emit->emitIns_R_R_I(INS_sd, EA_8BYTE, tmpReg, REG_WRITE_BARRIER_DST_BYREF, 0);
                         emit->emitIns_R_R_I(INS_sd, EA_8BYTE, tmpReg2, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
-                        emit->emitIns_R_R_I(INS_daddiu, EA_8BYTE, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, 2 * TARGET_POINTER_SIZE);
+                        emit->emitIns_R_R_I(INS_daddiu, attrDstAddr, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, 2 * TARGET_POINTER_SIZE);
                         ++i; // extra increment of i, since we are copying two items
                     }
                     else
                     {
                         emit->emitIns_R_R_I(INS_ld, EA_8BYTE, tmpReg, REG_WRITE_BARRIER_SRC_BYREF, 0);
-                        emit->emitIns_R_R_I(INS_daddiu, EA_8BYTE, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
+                        emit->emitIns_R_R_I(INS_daddiu, attrSrcAddr, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
                         emit->emitIns_R_R_I(INS_sd, EA_8BYTE, tmpReg, REG_WRITE_BARRIER_DST_BYREF, 0);
-                        emit->emitIns_R_R_I(INS_daddiu, EA_8BYTE, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
+                        emit->emitIns_R_R_I(INS_daddiu, attrDstAddr, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
                     }
                     break;
 
@@ -4041,7 +4047,7 @@ void CodeGen::genCodeForCompare(GenTreeOp* tree)
                 if (IsUnsigned)
                     emit->emitIns_R_R_I_I(INS_dext, EA_PTRSIZE, tmpRegOp1, op1->gtRegNum, 0, 32);
                 else
-                    emit->emitIns_R_R_R(INS_addu, EA_PTRSIZE, tmpRegOp1, op1->gtRegNum, REG_R0);
+                    emit->emitIns_R_R_I(INS_sll, EA_4BYTE, tmpRegOp1, op1->gtRegNum, 0);
             }
 
             if (tree->OperIs(GT_CMP))
@@ -4138,8 +4144,8 @@ void CodeGen::genCodeForCompare(GenTreeOp* tree)
                 }
                 else
                 {
-                    emit->emitIns_R_R_R(INS_addu, EA_PTRSIZE, tmpRegOp1, op1->gtRegNum, REG_R0);
-                    emit->emitIns_R_R_R(INS_addu, EA_PTRSIZE, tmpRegOp2, op2->gtRegNum, REG_R0);
+                    emit->emitIns_R_R_I(INS_sll, EA_4BYTE, tmpRegOp1, op1->gtRegNum, 0);
+                    emit->emitIns_R_R_I(INS_sll, EA_4BYTE, tmpRegOp2, op2->gtRegNum, 0);
                 }
             }
 
@@ -9449,7 +9455,7 @@ void CodeGen::genIntToIntCast(GenTreeCast* cast)
     //    if (dstType == TYP_INT)
     //    {
     //        // convert t0 int32
-    //        emit->emitIns_R_R_I(INS_addiu, EA_4BYTE, dstReg, srcReg, 0);
+    //        emit->emitIns_R_R_I(INS_sll, EA_4BYTE, dstReg, srcReg, 0);
     //    }
     //    else
     //    {
@@ -9484,7 +9490,7 @@ void CodeGen::genIntToIntCast(GenTreeCast* cast)
                 emit->emitIns_R_R_I_I(INS_dext, EA_PTRSIZE, dstReg, srcReg, pos, 32);
                 break;
             case GenIntCastDesc::SIGN_EXTEND_INT:
-                emit->emitIns_R_R_I(INS_addiu, EA_4BYTE, dstReg, srcReg, 0);
+                emit->emitIns_R_R_I(INS_sll, EA_4BYTE, dstReg, srcReg, 0);
                 break;
 #endif
             default:

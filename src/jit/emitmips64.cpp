@@ -1912,12 +1912,15 @@ void emitter::emitIns(instruction ins)
 
 /*****************************************************************************
  *
- *  Add an Load/Store instruction: base+offset.
+ *  Add an Load/Store instruction(s): base+offset and base-addr-computing if needed.
+ *  For referencing a stack-based local variable and a register
  */
 void emitter::emitIns_S_R(instruction ins, emitAttr attr, regNumber reg1, int varx, int offs)
 {
-    assert(offs >= 0);
+    //assert(offs >= 0);
     ssize_t imm;
+    regNumber regs[2];
+    regs[0] = reg1;
 
     emitAttr  size  = EA_SIZE(attr);//it's better confirm attr with ins.
 
@@ -1930,9 +1933,11 @@ void emitter::emitIns_S_R(instruction ins, emitAttr attr, regNumber reg1, int va
             break;
         case INS_sw:
         case INS_swc1:
-        //case INS_swl:
-        //case INS_swr:
+        case INS_swl:
+        case INS_swr:
             break;
+        case INS_sdl:
+        case INS_sdr:
         case INS_sd:
         case INS_sdc1:
             break;
@@ -1949,13 +1954,15 @@ void emitter::emitIns_S_R(instruction ins, emitAttr attr, regNumber reg1, int va
     bool FPbased;
 
     base = emitComp->lvaFrameAddress(varx, &FPbased);
-    imm = base + offs;
+    imm = offs < 0 ? -offs -8: base + offs;
 
     regNumber reg2 = FPbased ? REG_FPBASE : REG_SPBASE;
+    reg2 = offs < 0 ? REG_AT : reg2;
+    offs = offs < 0 ? -offs -8: offs;
 
     if ((-32768 <= imm) && (imm <= 32767))
     {
-        emitIns_R_R_I(ins, attr, reg1, reg2, imm);
+        regs[1] = reg2;
     }
     else
     {
@@ -1964,16 +1971,34 @@ void emitter::emitIns_S_R(instruction ins, emitAttr attr, regNumber reg1, int va
         emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
         imm2 = imm & 0xffff;
         emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
-        emitIns_R_R_R(INS_daddu, EA_8BYTE, REG_AT, REG_AT, reg2);
-        emitIns_R_R_I(ins, attr, reg1, REG_AT, 0);
+        emitIns_R_R_R(INS_daddu, attr, REG_AT, REG_AT, reg2);
+
+        regs[1] = REG_AT;
+        reg2 = REG_AT;
+        imm = 0;
     }
 
+    instrDesc* id = emitNewInstr(attr);
+
+    id->idReg1(reg1);
+
+    id->idReg2(reg2);
+
+    id->idIns(ins);
+    id->idAddr()->iiaSetInstrEncode(emitInsOps(ins, regs, &imm));
+    id->idAddr()->iiaLclVar.initLclVarAddr(varx, offs);
+    id->idSetIsLclVar();
+
+    //dispIns(id);
+    appendToCurIG(id);
 }
 
 void emitter::emitIns_R_S(instruction ins, emitAttr attr, regNumber reg1, int varx, int offs)
 {
     assert(offs >= 0);
     ssize_t imm;
+    regNumber regs[3];
+    regs[0] = reg1;
 
     emitAttr  size  = EA_SIZE(attr);//it's better confirm attr with ins.
 
@@ -1990,12 +2015,16 @@ void emitter::emitIns_R_S(instruction ins, emitAttr attr, regNumber reg1, int va
         case INS_lhu:
             break;
 
+        case INS_lwl:
+        case INS_lwr:
         case INS_sw:
         case INS_lw:
         case INS_lwu:
         case INS_lwc1:
             break;
 
+        case INS_ldl:
+        case INS_ldr:
         case INS_sd:
         case INS_ld:
         case INS_ldc1:
@@ -2029,8 +2058,7 @@ void emitter::emitIns_R_S(instruction ins, emitAttr attr, regNumber reg1, int va
         {
             ins = INS_daddiu;
         }
-
-        emitIns_R_R_I(ins, attr, reg1, reg2, imm);
+        regs[1] = reg2;
     }
     else
     {
@@ -2039,16 +2067,34 @@ void emitter::emitIns_R_S(instruction ins, emitAttr attr, regNumber reg1, int va
         emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
         imm2 = imm & 0xffff;
         emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
+
+        regs[1] = REG_AT;
         if (ins == INS_lea)
         {
-            emitIns_R_R_R(INS_daddu, EA_8BYTE, reg1, REG_AT, reg2);
+            regs[2] = reg2;
+            ins = INS_daddu;
+            //id->idReg3(reg2);//NOTE: in fact not used. so delete.
         }
         else
         {
-            emitIns_R_R_R(INS_daddu, EA_8BYTE, REG_AT, REG_AT, reg2);
-            emitIns_R_R_I(ins, attr, reg1, REG_AT, 0);
+            emitIns_R_R_R(INS_daddu, attr, REG_AT, REG_AT, reg2);
+            imm = 0;
         }
+        reg2 = REG_AT;
     }
+
+    instrDesc* id = emitNewInstr(attr);
+
+    id->idReg1(reg1);
+    id->idReg2(reg2);
+
+    id->idIns(ins);
+    id->idAddr()->iiaSetInstrEncode(emitInsOps(ins, regs, &imm));
+    id->idAddr()->iiaLclVar.initLclVarAddr(varx, offs);
+    id->idSetIsLclVar();
+
+    //dispIns(id);
+    appendToCurIG(id);
 }
 
 /*****************************************************************************
@@ -4776,7 +4822,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             *(code_t *)dst = emitInsOps(INS_bal, nullptr, &imm);
             dst += 4;
 
-            unsigned int dataOffs = jmp->idAddr()->iiaGetInstrEncode();//get data's offset.
+            unsigned int dataOffs = jmp->idAddr()->iiaGetJmpOffset();//get data's offset.
             assert(dataOffs > 0);
             assert(!(dataOffs & 0x3));
 
@@ -4826,7 +4872,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             *(code_t *)dst = emitInsOps(INS_bal, nullptr, &imm);
             dst += 4;
 
-            imm = (ssize_t) id->idAddr()->iiaGetInstrEncode();//get jmp's offset, temporarily saved.
+            imm = (ssize_t) id->idAddr()->iiaGetJmpOffset();//get jmp's offset, temporarily saved.
             assert(imm > 0);
 
             //NOTE:bit0=1 is Backward jump!
@@ -4888,7 +4934,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
         //   jalr/jr  t9
         //   nop           <-----here add delay-slot!
         {
-            ssize_t imm = (ssize_t) id->idAddr()->iiaGetInstrEncode();//get jmp's offset, temporarily saved.
+            ssize_t imm = (ssize_t) id->idAddr()->iiaGetJmpOffset();//get jmp's offset, temporarily saved.
             assert(imm >= 0);
 
             //NOTE:bit0=1 is Backward jump!
@@ -8533,9 +8579,19 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
     else if (dst->OperGet() == GT_MUL)
     {
         ssize_t imm;
-
+        if (EA_SIZE(attr) == EA_4BYTE)
+        {
+            regNumber tmpRegOp1 = dst->ExtractTempReg();
+            regNumber tmpRegOp2 = dst->ExtractTempReg();
+            emitIns_R_R_I(INS_sll, attr, tmpRegOp1, src1->gtRegNum, 0);
+            emitIns_R_R_I(INS_sll, attr, tmpRegOp2, src2->gtRegNum, 0);
+            emitIns_R_R(ins, attr, tmpRegOp1, tmpRegOp2);
+        }
+        else
+        {
+            emitIns_R_R(ins, attr, src1->gtRegNum, src2->gtRegNum);
+        }
         // n * n bytes will store n bytes result
-        emitIns_R_R(ins, EA_SIZE(attr), src1->gtRegNum, src2->gtRegNum);
         emitIns_R(INS_mflo, attr, dst->gtRegNum);
 
         if (needCheckOv)
@@ -8571,7 +8627,18 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
     }
     else if (dst->OperGet() == GT_DIV || dst->OperGet() == GT_UDIV || dst->OperGet() == GT_MOD || dst->OperGet() == GT_UMOD)
     {
-        emitIns_R_R(ins, EA_SIZE(attr), src1->gtRegNum, src2->gtRegNum);
+        if (EA_SIZE(attr) == EA_4BYTE)
+        {
+            regNumber tmpRegOp1 = dst->ExtractTempReg();
+            regNumber tmpRegOp2 = dst->ExtractTempReg();
+            emitIns_R_R_I(INS_sll, attr, tmpRegOp1, src1->gtRegNum, 0);
+            emitIns_R_R_I(INS_sll, attr, tmpRegOp2, src2->gtRegNum, 0);
+            emitIns_R_R(ins, attr, tmpRegOp1, tmpRegOp2);
+        }
+        else
+        {
+            emitIns_R_R(ins, attr, src1->gtRegNum, src2->gtRegNum);
+        }
 
         if (dst->OperGet() == GT_DIV || dst->OperGet() == GT_UDIV)
             emitIns_R(INS_mflo, attr, dst->gtRegNum);
@@ -8586,7 +8653,7 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
 
         // MIPS needs to sign-extend dst when deal with 32bit data
         if (attr == EA_4BYTE)
-             emitIns_R_R_R(INS_addu, attr, dst->gtRegNum, dst->gtRegNum, REG_R0);
+             emitIns_R_R_I(INS_sll, attr, dst->gtRegNum, dst->gtRegNum, 0);
     }
     else
     {

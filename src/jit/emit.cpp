@@ -3941,7 +3941,7 @@ AGAIN:
             //More Info see emitter::emitIns_R_C() within file emitmips64.cpp
             assert(jmpDist > 0);
             assert(!(jmpDist & 0x3));
-            jmp->idAddr()->iiaSetInstrEncode((unsigned int)jmpDist);//temporarily saved data's offset.
+            jmp->idAddr()->iiaSetJmpOffset((unsigned int)jmpDist);//temporarily saved data's offset.
 
             continue;
         }
@@ -4106,7 +4106,7 @@ AGAIN:
 #if defined(_TARGET_MIPS64_)
             assert(jmpDist >= 0);//Forward jump
             assert(!(jmpDist & 0x3));
-            jmp->idAddr()->iiaSetInstrEncode((unsigned int)jmpDist);
+            jmp->idAddr()->iiaSetJmpOffset((unsigned int)jmpDist);
 #endif
             if (extra <= 0)
             {
@@ -4125,7 +4125,7 @@ AGAIN:
 #if defined(_TARGET_MIPS64_)
             assert(jmpDist >= 0);//Backward jump
             assert(!(jmpDist & 0x3));
-            jmp->idAddr()->iiaSetInstrEncode((unsigned int)jmpDist+1);//NOTE:bit0=1 is Backward jump!
+            jmp->idAddr()->iiaSetJmpOffset((unsigned int)jmpDist+1);//NOTE:bit0=1 is Backward jump!
 #endif
 
             /* How much beyond the max. short distance does the jump go? */
